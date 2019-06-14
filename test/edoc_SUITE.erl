@@ -83,9 +83,15 @@ build_map_module(Config) when is_list(Config) ->
 otp_12008(Config) when is_list(Config) ->
     DataDir  = ?config(data_dir, Config),
     PrivDir  = ?config(priv_dir, Config),
-    Un1 = filename:join(DataDir, "un1.erl"),
-    Un2 = filename:join(DataDir, "un2.erl"),
-    Un3 = filename:join(DataDir, "un3.erl"),
+    %% rebar3 tries to compile all files under test/, but un3.erl won't compile of course
+    Un1In = filename:join(DataDir, "un1.erl.in"),
+    Un2In = filename:join(DataDir, "un2.erl.in"),
+    Un3In = filename:join(DataDir, "un3.erl.in"),
+    Un1 = filename:join(PrivDir, "un1.erl"),
+    Un2 = filename:join(PrivDir, "un2.erl"),
+    Un3 = filename:join(PrivDir, "un3.erl"),
+    [ {ok, _} = file:copy(From, To)
+      || {From, To} <- [{Un1In, Un1}, {Un2In, Un2}, {Un3In, Un3}] ],
     %% epp_dodger
     Opts1 = [{dir, PrivDir}],
     ok = edoc:files([Un1], Opts1),
