@@ -1,9 +1,10 @@
-edoc
-=====
+# edoc
 
-An OTP library
+EDoc OTP library extracted from [Erlang/OTP](https://github.com/erlang/otp).
+The aim of this fork is to make EDoc emit `Docs` chunks.
 
-Build
------
+## Build
 
-    $ rebar3 compile
+```
+$ rebar3 compile
+```
