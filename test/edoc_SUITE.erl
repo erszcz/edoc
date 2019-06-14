@@ -26,7 +26,13 @@
 -export([app/1,appup/1,build_std/1,build_map_module/1,otp_12008/1,
          build_app/1, otp_14285/1]).
 
-suite() -> [{ct_hooks,[ts_install_cth]}].
+suite() ->
+    case os:getenv("ERL_TOP") of
+        false ->
+            [];
+        _ ->
+            [{ct_hooks,[ts_install_cth]}]
+    end.
 
 all() -> 
     [app,appup,build_std,build_map_module,otp_12008, build_app, otp_14285].
