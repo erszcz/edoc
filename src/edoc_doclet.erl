@@ -43,16 +43,16 @@
 %% @headerfile "../include/edoc_doclet.hrl"
 -include("../include/edoc_doclet.hrl").
 
--export_type([context/0,
+-export_type([doclet_context/0,
 	      no_app/0,
 	      doclet_gen/0,
 	      doclet_toc/0]).
 
-%% @type context().
+%% @type doclet_context().
 %%    Context for doclets.
--type context() :: #context{dir :: string(),
-			    env :: edoc_lib:edoc_env(),
-			    opts :: [term()]}.
+-type doclet_context() :: #doclet_context{dir :: string(),
+					  env :: edoc_lib:edoc_env(),
+					  opts :: [term()]}.
 
 %% @type no_app().
 %%    A value used to mark absence of an Erlang application
@@ -89,7 +89,7 @@
 %% usually include the data from the edoc-info file in the target
 %% directory, if it exists.)
 
-%% @spec (Command::doclet_gen() | doclet_toc(), edoc_context()) -> ok
+-spec run(Command :: doclet_gen() | doclet_toc(), doclet_context()) -> ok.
 %% @doc Main doclet entry point. See the file <a
 %% href="edoc_doclet.hrl">`edoc_doclet.hrl'</a> for the data
 %% structures used for passing parameters.
@@ -154,9 +154,9 @@ run(#doclet_toc{}=Cmd, Ctxt) ->
     toc(Cmd#doclet_toc.paths, Ctxt).
 
 gen(Sources, App, Modules, Ctxt) ->
-    Dir = Ctxt#context.dir,
-    Env = Ctxt#context.env,
-    Options = Ctxt#context.opts,
+    Dir = Ctxt#doclet_context.dir,
+    Env = Ctxt#doclet_context.env,
+    Options = Ctxt#doclet_context.opts,
     Title = title(App, Options),
     CSS = stylesheet(Options),
     {Modules1, Error} = sources(Sources, Dir, Modules, Env, Options),
@@ -450,9 +450,9 @@ read_file(File, Context, Env, Opts) ->
 -define(CURRENT_DIR, ".").
 
 toc(Paths, Ctxt) ->
-    Opts = Ctxt#context.opts,
-    Dir = Ctxt#context.dir,
-    Env = Ctxt#context.env,
+    Opts = Ctxt#doclet_context.opts,
+    Dir = Ctxt#doclet_context.dir,
+    Env = Ctxt#doclet_context.env,
     app_index_file(Paths, Dir, Env, Opts).
 
 %% TODO: FIXME: it's unclear how much of this is working at all

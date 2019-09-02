@@ -28,9 +28,9 @@
 
 -define(NO_APP, []).
 
--record(context, {dir = "",
-		  env,
-		  opts = []}).
+-record(doclet_context, {dir = "",
+			 env,
+			 opts = []}).
 
 -record(doclet_gen, {sources = [],
 		     app = ?NO_APP,

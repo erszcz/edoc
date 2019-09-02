@@ -323,7 +323,7 @@ opt_negations() ->
 run(Files, Opts0) ->
     Opts = expand_opts(Opts0),
     Ctxt = init_context(Opts),
-    Dir = Ctxt#context.dir,
+    Dir = Ctxt#doclet_context.dir,
     Path = proplists:append_values(source_path, Opts),
     Ss = sources(Path, Opts),
     {Ss1, Ms} = expand_sources(expand_files(Files) ++ Ss, Opts),
@@ -331,7 +331,7 @@ run(Files, Opts0) ->
     {App1, Ms1} = target_dir_info(Dir, App, Ms, Opts),
     Ms2 = edoc_lib:unique(lists:sort(Ms1)),
     Env = edoc_lib:get_doc_env(App1, Ms2, Opts),
-    Ctxt1 = Ctxt#context{env = Env},
+    Ctxt1 = Ctxt#doclet_context{env = Env},
     Cmd = #doclet_gen{sources = Ss1,
 		      app = App1,
 		      modules = Ms2
@@ -349,7 +349,7 @@ expand_opts(Opts0) ->
 %% DEFER-OPTIONS: run/2
 
 init_context(Opts) ->
-    #context{dir = proplists:get_value(dir, Opts, ?CURRENT_DIR),
+    #doclet_context{dir = proplists:get_value(dir, Opts, ?CURRENT_DIR),
 	     opts = Opts
 	    }.
 
@@ -432,7 +432,7 @@ toc(Dir, Paths, Opts0) ->
     Opts = expand_opts(Opts0 ++ [{dir, Dir}]),
     Ctxt = init_context(Opts),
     Env = edoc_lib:get_doc_env('', [], Opts),
-    Ctxt1 = Ctxt#context{env = Env},
+    Ctxt1 = Ctxt#doclet_context{env = Env},
     F = fun (M) ->
 		M:run(#doclet_toc{paths=Paths}, Ctxt1)
 	end,
