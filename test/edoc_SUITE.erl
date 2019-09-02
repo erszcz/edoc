@@ -9,29 +9,46 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
-%% 
+%%
 %% The Initial Developer of the Original Code is Ericsson Utvecklings AB.
 %% Portions created by Ericsson are Copyright 1999, Ericsson Utvecklings
 %% AB. All Rights Reserved.''
-%% 
+%%
 -module(edoc_SUITE).
 
 -include_lib("common_test/include/ct.hrl").
 
 %% Test server specific exports
--export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1, 
+-export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1,
 	 init_per_group/2,end_per_group/2]).
 
 %% Test cases
--export([app/1,appup/1,build_std/1,build_map_module/1,otp_12008/1,
-         build_app/1, otp_14285/1]).
+-export([app/1,
+	 build_std/1,
+	 build_map_module/1,
+	 otp_12008/1,
+	 build_app/1,
+	 otp_14285/1]).
 
-suite() -> [{ct_hooks,[ts_install_cth]}].
+suite() ->
+    case os:getenv("ERL_TOP") of
+        false ->
+            [];
+        _ ->
+            [{ct_hooks,[ts_install_cth]}]
+    end.
 
-all() -> 
-    [app,appup,build_std,build_map_module,otp_12008, build_app, otp_14285].
+all() ->
+    [app,
+     %% TODO: reenable, possibly with https://github.com/lrascao/rebar3_appup_plugin
+     %appup,
+     build_std,
+     build_map_module,
+     otp_12008,
+     build_app,
+     otp_14285].
 
-groups() -> 
+groups() ->
     [].
 
 init_per_suite(Config) ->
@@ -83,9 +100,15 @@ build_map_module(Config) when is_list(Config) ->
 otp_12008(Config) when is_list(Config) ->
     DataDir  = ?config(data_dir, Config),
     PrivDir  = ?config(priv_dir, Config),
-    Un1 = filename:join(DataDir, "un1.erl"),
-    Un2 = filename:join(DataDir, "un2.erl"),
-    Un3 = filename:join(DataDir, "un3.erl"),
+    %% rebar3 tries to compile all files under test/, but un3.erl won't compile of course
+    Un1In = filename:join(DataDir, "un1.erl.in"),
+    Un2In = filename:join(DataDir, "un2.erl.in"),
+    Un3In = filename:join(DataDir, "un3.erl.in"),
+    Un1 = filename:join(PrivDir, "un1.erl"),
+    Un2 = filename:join(PrivDir, "un2.erl"),
+    Un3 = filename:join(PrivDir, "un3.erl"),
+    [ {ok, _} = file:copy(From, To)
+      || {From, To} <- [{Un1In, Un1}, {Un2In, Un2}, {Un3In, Un3}] ],
     %% epp_dodger
     Opts1 = [{dir, PrivDir}],
     ok = edoc:files([Un1], Opts1),
