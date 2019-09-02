@@ -9,22 +9,26 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
-%% 
+%%
 %% The Initial Developer of the Original Code is Ericsson Utvecklings AB.
 %% Portions created by Ericsson are Copyright 1999, Ericsson Utvecklings
 %% AB. All Rights Reserved.''
-%% 
+%%
 -module(edoc_SUITE).
 
 -include_lib("common_test/include/ct.hrl").
 
 %% Test server specific exports
--export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1, 
+-export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1,
 	 init_per_group/2,end_per_group/2]).
 
 %% Test cases
--export([app/1,appup/1,build_std/1,build_map_module/1,otp_12008/1,
-         build_app/1, otp_14285/1]).
+-export([app/1,
+	 build_std/1,
+	 build_map_module/1,
+	 otp_12008/1,
+	 build_app/1,
+	 otp_14285/1]).
 
 suite() ->
     case os:getenv("ERL_TOP") of
@@ -34,10 +38,17 @@ suite() ->
             [{ct_hooks,[ts_install_cth]}]
     end.
 
-all() -> 
-    [app,appup,build_std,build_map_module,otp_12008, build_app, otp_14285].
+all() ->
+    [app,
+     %% TODO: reenable, possibly with https://github.com/lrascao/rebar3_appup_plugin
+     %appup,
+     build_std,
+     build_map_module,
+     otp_12008,
+     build_app,
+     otp_14285].
 
-groups() -> 
+groups() ->
     [].
 
 init_per_suite(Config) ->
