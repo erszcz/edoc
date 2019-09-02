@@ -43,6 +43,35 @@
 %% @headerfile "../include/edoc_doclet.hrl"
 -include("../include/edoc_doclet.hrl").
 
+-export_type([context/0,
+	      no_app/0,
+	      doclet_gen/0,
+	      doclet_toc/0]).
+
+%% @type context().
+%%    Context for doclets.
+-type context() :: #context{dir :: string(),
+			    env :: edoc_lib:edoc_env(),
+			    opts :: [term()]}.
+
+%% @type no_app().
+%%    A value used to mark absence of an Erlang application
+%%    context. Use the macro `NO_APP' defined in
+%%    <a href="edoc_doclet.hrl">`edoc_doclet.hrl'</a>
+%%    to produce this value.
+-type no_app() :: ?NO_APP.
+
+%% @type doclet_gen().
+%%    Doclet command.
+-type doclet_gen() :: #doclet_gen{sources :: [string()],
+				  app :: no_app() | atom(),
+				  modules :: [module()]}.
+
+%% @type doclet_toc().
+%%    Doclet command.
+-type doclet_toc() :: #doclet_toc{paths :: [string()],
+				  indir :: string()}.
+
 -define(EDOC_APP, edoc).
 -define(DEFAULT_FILE_SUFFIX, ".html").
 -define(INDEX_FILE, "index.html").
