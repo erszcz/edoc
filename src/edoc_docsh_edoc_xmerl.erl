@@ -1,4 +1,4 @@
--module(docsh_edoc_xmerl).
+-module(edoc_docsh_edoc_xmerl).
 
 %% xmerl:simple_export/2 API
 -export(['#root#'/4,
@@ -29,7 +29,7 @@
 
 %% The '#root#' tag is called when the entire structure has been
 %% exported. It does not appear in the structure itself.
--spec '#root#'(any(), any(), any(), any()) -> docsh_internal:t().
+-spec '#root#'(any(), any(), any(), any()) -> edoc_docsh_internal:t().
 '#root#'([#xmlElement{name = module} = Module], _, _, _) ->
     #{name => get_module_name(Module),
       description => get_module_description(Module),
@@ -52,13 +52,13 @@ get_module_name(#xmlElement{attributes = Attrs}) ->
 get_module_description(#xmlElement{name = module} = M) ->
     get_description(M).
 
--spec get_functions(#xmlElement{}) -> [docsh_internal:item()].
+-spec get_functions(#xmlElement{}) -> [edoc_docsh_internal:item()].
 get_functions(#xmlElement{name = module} = M) ->
     get_content(functions, [], fun get_functions/1, M);
 get_functions(#xmlElement{name = functions, content = Content}) ->
     [ get_function(Function) || #xmlElement{name = function} = Function <- Content ].
 
--spec get_function(#xmlElement{}) -> docsh_internal:item().
+-spec get_function(#xmlElement{}) -> edoc_docsh_internal:item().
 get_function(#xmlElement{attributes = Attrs} = Function) ->
     #{kind        => 'function',
       name        => ?l2ea('find_attribute!'(name, Attrs)),
@@ -66,13 +66,13 @@ get_function(#xmlElement{attributes = Attrs} = Function) ->
       exported    => list_to_boolean('find_attribute!'(exported, Attrs)),
       description => get_function_description(Function)}.
 
--spec get_types(#xmlElement{}) -> [docsh_internal:item()].
+-spec get_types(#xmlElement{}) -> [edoc_docsh_internal:item()].
 get_types(#xmlElement{name = module} = M) ->
     get_content(typedecls, [], fun get_types/1, M);
 get_types(#xmlElement{name = typedecls, content = Content}) ->
     [ get_type(Type) || #xmlElement{name = typedecl} = Type <- Content ].
 
--spec get_type(#xmlElement{}) -> docsh_internal:item().
+-spec get_type(#xmlElement{}) -> edoc_docsh_internal:item().
 get_type(#xmlElement{name = typedecl} = Type) ->
     #{kind        => 'type',
       name        => get_type_name(Type),

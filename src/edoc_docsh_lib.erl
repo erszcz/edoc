@@ -1,4 +1,4 @@
--module(docsh_lib).
+-module(edoc_docsh_lib).
 
 -export([beam_diff/2,
          convert/3,
@@ -32,10 +32,10 @@
 -spec convert(Readers, Writer, Beam) -> docsh:external() when
       Readers :: [module()],
       Writer :: module(),
-      Beam :: docsh_beam:t().
+      Beam :: edoc_docsh_beam:t().
 convert(Readers, Writer, Beam) ->
     InternalDocs = lists:flatmap(fun convert_one/1, [ {R, Beam} || R <- Readers ]),
-    Merged = docsh_internal:merge(InternalDocs),
+    Merged = edoc_docsh_internal:merge(InternalDocs),
     Writer:from_internal(Merged).
 
 convert_one({Reader, Mod}) ->
@@ -107,7 +107,7 @@ has_docs(BEAMFile) ->
         _    -> false
     end.
 
--spec get_abstract_code(file:filename()) -> docsh_beam:debug_info() | false.
+-spec get_abstract_code(file:filename()) -> edoc_docsh_beam:debug_info() | false.
 get_abstract_code(BEAMFile) ->
     case beam_lib:chunks(BEAMFile, [debug_info]) of
         {ok, {_Module, [{debug_info, DbgiV1}]}} ->
@@ -202,10 +202,10 @@ format_error(Reason) when is_list(Reason);
 format_error({error, Reason, Stacktrace}) ->
     io_lib:format("docsh error: ~p~n~p~n", [Reason, Stacktrace]).
 
--spec available_readers(docsh_beam:t()) -> [docsh_reader:t()].
+-spec available_readers(edoc_docsh_beam:t()) -> [edoc_docsh_reader:t()].
 available_readers(Beam) ->
-    docsh_edoc:available(Beam) ++
-    docsh_syntax:available(Beam).
+    edoc_docsh_edoc:available(Beam) ++
+    edoc_docsh_syntax:available(Beam).
 
 -spec is_module_available(module()) -> boolean().
 is_module_available(Mod) ->
@@ -221,9 +221,9 @@ group_by(F, L) ->
     lists:foldr(fun({K,V}, D) -> dict:append(K, V, D) end,
                 dict:new(), [ {F(X), X} || X <- L ]).
 
--spec get_docs(module()) -> {ok, docsh_format:t()} | {error, any()}.
+-spec get_docs(module()) -> {ok, edoc_docsh_format:t()} | {error, any()}.
 get_docs(M) ->
-    case docsh_beam:from_loaded_module(M) of
+    case edoc_docsh_beam:from_loaded_module(M) of
         {error, _} = E -> E;
         {ok, B} ->
             MakeDocs = application:get_env(docsh, compile_on_demand, compile_if_missing),
@@ -233,7 +233,7 @@ get_docs(M) ->
 
 do_get_docs(B) ->
     try
-        {ok, docsh_beam:docs(B)}
+        {ok, edoc_docsh_beam:docs(B)}
     catch _:R ->
         {error, R}
     end.
@@ -251,18 +251,18 @@ dispatch_docs_extraction(B, always, _) ->
 
 dispatch_docs_extraction_(B) ->
     {ok, Docs, Warnings} = make_docs(B),
-    [ print("~s", [docsh_lib:format_error({W, docsh_beam:name(B)})]) || W <- Warnings ],
+    [ print("~s", [edoc_docsh_lib:format_error({W, edoc_docsh_beam:name(B)})]) || W <- Warnings ],
     %% TODO: enable cache at some point
     %cache_docs(B, Docs),
     {ok, Docs}.
 
--spec make_docs(docsh_beam:t()) -> {ok, docsh_format:t(), [Warning]} when
+-spec make_docs(edoc_docsh_beam:t()) -> {ok, edoc_docsh_format:t(), [Warning]} when
       Warning :: no_debug_info | no_src.
 make_docs(Beam) ->
-    BEAMFile = docsh_beam:beam_file(Beam),
+    BEAMFile = edoc_docsh_beam:beam_file(Beam),
     has_docs(BEAMFile)
         andalso erlang:error(docs_present, [BEAMFile]),
-    case {docsh_beam:abstract_code(Beam), docsh_beam:source_file(Beam)} of
+    case {edoc_docsh_beam:abstract_code(Beam), edoc_docsh_beam:source_file(Beam)} of
         {false, false} ->
             erlang:error({no_debug_info_no_src, BEAMFile}, [BEAMFile]);
         {_, false} ->
@@ -273,16 +273,16 @@ make_docs(Beam) ->
             {ok, do_make_docs(Beam), []}
     end.
 
--spec do_make_docs(docsh_beam:t()) -> {string(), binary()}.
+-spec do_make_docs(edoc_docsh_beam:t()) -> {string(), binary()}.
 do_make_docs(Beam) ->
     FromMods = get_readers(Beam),
     FromMods == []
         andalso erlang:error(no_readers_available),
-    ToMod = application:get_env(docsh, docsh_writer, default_writer()),
+    ToMod = application:get_env(docsh, edoc_docsh_writer, default_writer()),
     convert(FromMods, ToMod, Beam).
 
 default_writer() ->
-    docsh_docs_v1.
+    edoc_docsh_docs_v1.
 
 get_readers(Beam) ->
     application:get_env(docsh, readers, available_readers(Beam)).

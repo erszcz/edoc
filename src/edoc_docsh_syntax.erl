@@ -1,24 +1,24 @@
--module(docsh_syntax).
+-module(edoc_docsh_syntax).
 
--behaviour(docsh_reader).
+-behaviour(edoc_docsh_reader).
 -export([available/1,
          to_internal/1]).
 
--include("docsh_stacktrace.hrl").
+-include("edoc_docsh_stacktrace.hrl").
 
 -define(il2b(IOList), iolist_to_binary(IOList)).
 -define(l(Args), fun () -> Args end).
 
--spec available(docsh_beam:t()) -> [docsh_reader:t()].
+-spec available(edoc_docsh_beam:t()) -> [edoc_docsh_reader:t()].
 available(Beam) ->
-    [ ?MODULE || docsh_beam:abstract_code(Beam) /= false ].
+    [ ?MODULE || edoc_docsh_beam:abstract_code(Beam) /= false ].
 
--spec to_internal(docsh_beam:t()) -> R when
-      R :: {ok, docsh_internal:t()}
+-spec to_internal(edoc_docsh_beam:t()) -> R when
+      R :: {ok, edoc_docsh_internal:t()}
          | {error, any(), [erlang:stack_item()]}.
 to_internal(Beam) ->
     try
-        Forms = case {docsh_beam:abstract_code(Beam), docsh_beam:source_file(Beam)} of
+        Forms = case {edoc_docsh_beam:abstract_code(Beam), edoc_docsh_beam:source_file(Beam)} of
                     {false, false} ->
                         erlang:error(no_debug_info_no_src, [Beam]);
                     {Abst, false} ->
@@ -41,7 +41,7 @@ get_module_name(Forms) ->
         {_, _, module, Mod} -> Mod
     end.
 
--spec get_functions([erl_parse:abstract_form()]) -> [docsh_internal:item()].
+-spec get_functions([erl_parse:abstract_form()]) -> [edoc_docsh_internal:item()].
 get_functions(Forms) ->
     [ function(Spec) || {attribute, _, spec, _} = Spec <- Forms ].
 
@@ -62,7 +62,7 @@ function_arity({attribute, _, spec, Data}) ->
 function_signature({attribute, _, spec, _} = Spec) ->
     ?il2b(format(Spec)).
 
--spec get_types([erl_parse:abstract_form()]) -> [docsh_internal:item()].
+-spec get_types([erl_parse:abstract_form()]) -> [edoc_docsh_internal:item()].
 get_types(Forms) ->
     lists:filtermap(fun get_type/1, Forms).
 

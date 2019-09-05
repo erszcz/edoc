@@ -1,4 +1,4 @@
--module(docsh_beam).
+-module(edoc_docsh_beam).
 
 -export([from_beam_file/1,
          from_loaded_module/1,
@@ -12,9 +12,9 @@
 
 -export_type([t/0]).
 
--record(docsh_beam, {name, beam_file, source_file}).
+-record(edoc_docsh_beam, {name, beam_file, source_file}).
 
--opaque t() :: #docsh_beam{name :: module(),
+-opaque t() :: #edoc_docsh_beam{name :: module(),
                            %% `beam_file` has to be defined and is a file name.
                            %% TODO: Support dynamically compiled or network-loaded modules later.
                            beam_file :: file:filename(),
@@ -37,29 +37,29 @@ from_loaded_module(Mod) ->
                E =:= preloaded ->
             {error, {no_beam_file, E}};
         BEAMFile ->
-            {ok, #docsh_beam{name = Mod,
+            {ok, #edoc_docsh_beam{name = Mod,
                              beam_file = BEAMFile,
-                             source_file = bind(docsh_lib:get_source_file(BEAMFile))}}
+                             source_file = bind(edoc_docsh_lib:get_source_file(BEAMFile))}}
     end.
 
 -spec from_beam_file(file:filename()) -> {ok, t()} | {error, any()}.
 from_beam_file(BEAMFile) ->
-    {ok, #docsh_beam{name = beam_name(BEAMFile),
+    {ok, #edoc_docsh_beam{name = beam_name(BEAMFile),
                      beam_file = BEAMFile,
-                     source_file = bind(docsh_lib:get_source_file(BEAMFile))}}.
+                     source_file = bind(edoc_docsh_lib:get_source_file(BEAMFile))}}.
 
 -spec name(t()) -> module().
-name(B) -> B#docsh_beam.name.
+name(B) -> B#edoc_docsh_beam.name.
 
 -spec abstract_code(t()) -> debug_info() | false.
 abstract_code(B) ->
-    bind(docsh_lib:get_abstract_code(beam_file(B))).
+    bind(edoc_docsh_lib:get_abstract_code(beam_file(B))).
 
 -spec beam_file(t()) -> file:filename().
-beam_file(B) -> B#docsh_beam.beam_file.
+beam_file(B) -> B#edoc_docsh_beam.beam_file.
 
--spec docs(t()) -> docsh_format:t().
-docs(#docsh_beam{} = B) ->
+-spec docs(t()) -> edoc_docsh_format:t().
+docs(#edoc_docsh_beam{} = B) ->
     case beam_lib:chunks(beam_file(B), ["Docs"]) of
         {ok, {_Mod, [{"Docs", BDocs}]}} ->
             erlang:binary_to_term(BDocs);
@@ -69,14 +69,14 @@ docs(#docsh_beam{} = B) ->
     end.
 
 -spec source_file(t()) -> file:filename() | false.
-source_file(B) -> B#docsh_beam.source_file.
+source_file(B) -> B#edoc_docsh_beam.source_file.
 
 -spec source_file(t(), file:filename()) -> t().
-source_file(B, NewFile) -> B#docsh_beam{source_file = NewFile}.
+source_file(B, NewFile) -> B#edoc_docsh_beam{source_file = NewFile}.
 
 -spec attribute(t(), atom()) -> term().
 attribute(B, Name) ->
-    docsh_lib:get(Name, (B#docsh_beam.name):module_info(attributes)).
+    edoc_docsh_lib:get(Name, (B#edoc_docsh_beam.name):module_info(attributes)).
 
 %%
 %% Helpers
