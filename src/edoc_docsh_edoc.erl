@@ -38,7 +38,7 @@ to_internal(Beam, Opts) ->
                    false -> erlang:error(edoc_requires_source);
                    F when is_list(F) -> F
                end,
-        {_Mod, EDoc} = edoc:get_doc(File, [preprocess]),
+        {_Mod, EDoc} = edoc:get_doc(File, [preprocess, {includes, ["include", "src"]}]),
         [ write(edoc_docsh_beam:name(Beam), Tag, OutDir, dispatch(Tag, File, EDoc))
           || {OutDir, Tags} <- [proplists:get_value(debug, Opts)],
              Tag <- Tags ],
