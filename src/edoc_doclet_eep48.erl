@@ -40,7 +40,7 @@
 -include("../include/edoc_doclet.hrl").
 
 %-define(EDOC_APP, edoc).
--define(DEFAULT_FILE_SUFFIX, ".chunk").
+-define(DEFAULT_FILE_SUFFIX, ".docs.chunk").
 %-define(INDEX_FILE, "index.html").
 %-define(OVERVIEW_FILE, "overview.edoc").
 %-define(OVERVIEW_SUMMARY, "overview-summary.html").
@@ -97,7 +97,8 @@ sources(Sources, Dir, Modules, Env, Options) ->
 					 %Private, Hidden, Error, Options)
 					 Error, Options)
 			  end,
-			  {sets:new(), false}, Sources),
+			  {sets:new(), []}, Sources),
+    print_warnings(E),
     {[M || M <- Modules, sets:is_element(M, Ms)], E}.
 
 
@@ -106,27 +107,59 @@ sources(Sources, Dir, Modules, Env, Options) ->
 %% allowing all source files to be processed even if some of them fail.
 
 %source({M, Name, Path}, Dir, Suffix, Env, Set, Private, Hidden,
-source({M, Name, Path}, Dir, Suffix, Env, Set, Error, Options) ->
-    edoc_docsh_lib:convert(),
-    File = filename:join(Path, Name),
-    case catch {ok, edoc:get_doc(File, Env, Options)} of
-	{ok, {Module, Doc}} ->
-	    check_name(Module, M, File),
-	    %case ((not is_private(Doc)) orelse Private)
-	    %    andalso ((not is_hidden(Doc)) orelse Hidden) of
-	    %    true ->
-		    Text = edoc:layout(Doc, Options),
-		    Name1 = atom_to_list(M) ++ Suffix,
-                    Encoding = [{encoding,encoding(Doc)}],
-		    edoc_lib:write_file(Text, Dir, Name1, Encoding),
-		    {sets:add_element(Module, Set), Error};
-	    %    false ->
-	    %        {Set, Error}
-	    %end;
-	R ->
-	    report("skipping source file '~ts': ~tP.", [File, R, 15]),
-	    {Set, true}
+%source({M, Name, Path}, Dir, Suffix, Env, Set, Error, Options) ->
+%    edoc_docsh_lib:convert(),
+%    File = filename:join(Path, Name),
+%    case catch {ok, edoc:get_doc(File, Env, Options)} of
+%        {ok, {Module, Doc}} ->
+%            check_name(Module, M, File),
+%            %case ((not is_private(Doc)) orelse Private)
+%            %    andalso ((not is_hidden(Doc)) orelse Hidden) of
+%            %    true ->
+%                    Text = edoc:layout(Doc, Options),
+%                    Name1 = atom_to_list(M) ++ Suffix,
+%                    Encoding = [{encoding,encoding(Doc)}],
+%                    edoc_lib:write_file(Text, Dir, Name1, Encoding),
+%                    {sets:add_element(Module, Set), Error};
+%            %    false ->
+%            %        {Set, Error}
+%            %end;
+%        R ->
+%            report("skipping source file '~ts': ~tP.", [File, R, 15]),
+%            {Set, true}
+%    end.
+
+source({M, Name, Path}, Dir, Suffix, Env, OkSet, Warnings, Options) ->
+    %convert(Readers, Writer, Beam) ->
+    {ok, Beam} = edoc_docsh_beam:from_loaded_module(M),
+    {ok, Docs, NewWarnings} = edoc_docsh_lib:make_docs(Beam),
+    Name1 = atom_to_list(M) ++ Suffix,
+    BDocsChunk = term_to_binary(Docs, [compressed]),
+    %Encoding = [{encoding, encoding(Doc)}],
+    Encoding = [{encoding, utf8}],
+    ok = write_file(BDocsChunk, Dir, Name1, Encoding),
+    %ok = write_file(Docs, Dir, Name1, Encoding),
+    {sets:add_element(Name, OkSet), [ {Name, W} || W <- NewWarnings ] ++ Warnings}.
+
+write_file(Text, Dir, Name, Options) ->
+    File = filename:join([Dir, Name]),
+    ok = filelib:ensure_dir(File),
+    case file:write_file(File, Text) of
+	ok -> ok;
+	{error, R} ->
+	    R1 = file:format_error(R),
+	    report("could not write file '~ts': ~ts.", [File, R1]),
+	    exit(error)
     end.
+
+%{ok, Docs, Warnings} = docsh_lib:make_docs(B),
+%print_warnings(docsh_beam:name(B), Warnings),
+%DocsChunk = make_docs_chunk(Docs),
+%{ok, NewBeam} = add_chunks(BeamFile, [DocsChunk]),
+%ok = file:write_file(BeamFile, NewBeam)
+
+print_warnings(Warnings) ->
+    [ docsh_lib:print("~s", [docsh_lib:format_error({W, Name})]) || {Name, W} <- Warnings ].
 
 check_name(M, M0, File) ->
     N = M,
