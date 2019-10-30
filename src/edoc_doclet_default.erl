@@ -130,7 +130,7 @@ gen(Sources, App, Modules, Ctxt) ->
     Options = Ctxt#doclet_context.opts,
     Title = title(App, Options),
     CSS = stylesheet(Options),
-    {Modules1, Error} = sources(Sources, Dir, Modules, Env, Options),
+    {Modules1, Errors} = sources(Sources, Dir, Modules, Env, Options),
     modules_frame(Dir, Modules1, Title, CSS),
     overview(Dir, Title, Env, Options),
     index_file(Dir, Title),
@@ -138,9 +138,11 @@ gen(Sources, App, Modules, Ctxt) ->
     copy_stylesheet(Dir, Options),
     copy_image(Dir),
     %% handle postponed error during processing of source files
-    case Error of
-	true -> exit(error);
-	false -> ok
+    case Errors of
+	[] -> ok;
+	[_|_] ->
+	    erlang:error({failed_processing_sources, Errors},
+			 [Sources, App, Modules, Ctxt])
     end.
 
 
@@ -168,11 +170,13 @@ sources(Sources, Dir, Modules, Env, Options) ->
 				 ?DEFAULT_FILE_SUFFIX),
     Private = proplists:get_bool(private, Options),
     Hidden = proplists:get_bool(hidden, Options),
-    {Ms, E} = lists:foldl(fun (Src, {Set, Error}) ->
-				  source(Src, Dir, Suffix, Env, Set,
-					 Private, Hidden, Error, Options)
+    DoneAcc0 = sets:new(),
+    ErrorsAcc0 = [],
+    {Ms, E} = lists:foldl(fun (Src, {DoneAcc, ErrorsAcc}) ->
+				  source(Src, Dir, Suffix, Env, DoneAcc,
+					 Private, Hidden, ErrorsAcc, Options)
 			  end,
-			  {sets:new(), false}, Sources),
+			  {DoneAcc0, ErrorsAcc0}, Sources),
     {[M || M <- Modules, sets:is_element(M, Ms)], E}.
 
 
@@ -180,8 +184,8 @@ sources(Sources, Dir, Modules, Env, Options) ->
 %% set if it was successful. Errors are just flagged at this stage,
 %% allowing all source files to be processed even if some of them fail.
 
-source({M, Name, Path}, Dir, Suffix, Env, Set, Private, Hidden,
-       Error, Options) ->
+source({M, Name, Path}, Dir, Suffix, Env, Done, Private, Hidden,
+       Errors, Options) ->
     File = filename:join(Path, Name),
     case catch {ok, edoc:get_doc(File, Env, Options)} of
 	{ok, {Module, Doc}} ->
@@ -193,13 +197,13 @@ source({M, Name, Path}, Dir, Suffix, Env, Set, Private, Hidden,
 		    Name1 = atom_to_list(M) ++ Suffix,
                     Encoding = [{encoding,encoding(Doc)}],
 		    edoc_lib:write_file(Text, Dir, Name1, Encoding),
-		    {sets:add_element(Module, Set), Error};
+		    {sets:add_element(Module, Done), Errors};
 		false ->
-		    {Set, Error}
+		    {Done, Errors}
 	    end;
 	R ->
 	    report("skipping source file '~ts': ~tP.", [File, R, 15]),
-	    {Set, true}
+	    {Done, [{File, R} | Errors]}
     end.
 
 check_name(M, M0, File) ->
