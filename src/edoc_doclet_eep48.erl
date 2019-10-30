@@ -25,7 +25,7 @@
 %% =====================================================================
 
 %% @doc EEP-48 doclet module for EDoc.
-%% @see http://erlang.org/eeps/eep-0048.html
+%% @reference See http://erlang.org/eeps/eep-0048.html.
 %% @end
 
 %% Note that this is written so that it is *not* depending on edoc.hrl!
