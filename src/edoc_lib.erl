@@ -43,6 +43,7 @@
 -import(edoc_report, [report/2, warning/2]).
 
 -include("edoc.hrl").
+-include("edoc_docsh_stacktrace.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
 
 -define(FILE_BASE, "/").
@@ -996,12 +997,12 @@ run_plugin(Name, Default, Fun, Opts) ->
 
 run_plugin(Name, Key, Default, Fun, Opts) when is_atom(Name) ->
     Module = get_plugin(Key, Default, Opts),
-    case catch {ok, Fun(Module)} of
-	{ok, Value} ->
-	    Value;
-	R ->
-	    report("error in ~ts '~w': ~tP.", [Name, Module, R, 20]),
-	    exit(error)
+    try
+	Fun(Module)
+    catch ?STACKTRACE(_, R, Stacktrace)
+	report("error in ~ts '~w': ~tP.", [Name, Module, R, 20]),
+	io:format("stacktrace:\n~0p\n", [Stacktrace]),
+	exit(error)
     end.
 
 get_plugin(Key, Default, Opts) ->
