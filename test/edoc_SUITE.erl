@@ -124,8 +124,8 @@ otp_12008(Config) when is_list(Config) ->
 build_app(suite) -> [];
 build_app(doc) -> ["Build a local app with nested source directories"];
 build_app(Config) ->
-    DataDir  = ?config(data_dir, Config),
-    PrivDir  = ?config(priv_dir, Config),
+	DataDir = ?config(data_dir, Config),
+	PrivDir = ?config(priv_dir, Config),
 	OutDir = filename:join(PrivDir, "myapp"),
 	Src = filename:join(DataDir, "myapp"),
 
