@@ -1,29 +1,31 @@
 %% @doc A module to extract docs and attach them as chunks.
-%% @since 0.1.0
--module(docs_chunks).
+%% @since 0.12
+-module(edoc_chunks).
+
+-export([edoc_to_chunk/1,
+         otp_xml_to_chunk/2,
+         write_chunk/2]).
+
+-export_type([docs_v1/0,
+              docs_v1_entry/0,
+              beam_language/0,
+              mime_type/0,
+              doc/0,
+              doc_language/0,
+              doc_string/0,
+              metadata/0,
+              signature/0]).
+
+-include_lib("edoc/include/docs_v1.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
--export([edoc_to_chunk/1, otp_xml_to_chunk/2, write_chunk/2]).
 
--record(docs_v1, {anno,
-                  beam_language,
-                  format,
-                  module_doc,
-                  metadata,
-                  docs}).
-
--record(docs_v1_entry, {kind_name_arity,
-                        anno,
-                        signature,
-                        doc,
-                        metadata}).
-
+%% @type docs_v1(). The Docs v1 chunk according to EEP 48.
 -type docs_v1() :: #docs_v1{anno :: erl_anno:anno(),
                             beam_language :: beam_language(),
                             format :: mime_type(),
                             module_doc :: doc(),
                             metadata :: metadata(),
                             docs :: [docs_v1_entry()]}.
-%% The Docs v1 chunk according to EEP 48.
 
 -type docs_v1_entry() :: #docs_v1_entry{kind_name_arity :: {atom(), atom(), arity()},
                                         anno :: erl_anno:anno(),
@@ -32,17 +34,11 @@
                                         metadata :: metadata()}.
 
 -type beam_language() :: atom().
-
 -type mime_type() :: binary().
-
 -type doc() :: #{doc_language() => doc_string()} | none | hidden.
-
 -type doc_language() :: binary().
-
 -type doc_string() :: binary().
-
 -type metadata() :: map().
-
 -type signature() :: [binary()].
 
 %% @doc Fetch edoc docs from a given `ErlPath' and convert it to docs chunk.
@@ -52,11 +48,10 @@
 %% Examples:
 %%
 %% ```
-%% %% docs_chunks:edoc_to_chunk("src/foo.erl").
-%% #=> {docs_v1, ..., erlang, <<"text/markdown">>", ..., ..., ..., ...}
+%% > docs_chunks:edoc_to_chunk("src/foo.erl").
+%% {docs_v1, ..., erlang, <<"text/markdown">>", ..., ..., ..., ...}
 %% '''
-%%
-%% @since 0.0.1
+%% @end
 -spec edoc_to_chunk(string()) -> docs_v1().
 edoc_to_chunk(ErlPath) ->
     Includes = ["include", "src"],
@@ -66,7 +61,6 @@ edoc_to_chunk(ErlPath) ->
     DocContents = extract_doc_contents("./description/fullDescription", Doc),
     Docs = edoc_extract_docs(Doc),
     Chunk = docs_v1(DocContents, Metadata, Docs),
-    % 'Elixir.IO':inspect(Chunk),
     Chunk.
 
 extract_doc_contents(XPath, Doc) ->
@@ -77,7 +71,6 @@ extract_doc_contents(XPath, Doc) ->
             case xpath_to_binary(XPath, Doc) of
                 <<"">> ->
                     none;
-
                 Binary ->
                     #{<<"en">> => Binary}
             end
@@ -115,21 +108,20 @@ edoc_extract_function(Doc) ->
                 See = xpath_to_binary("./see", Equiv),
                 Binary = iolist_to_binary(["Equivalent to ", "[", Expr, "](`", See, "`)."]),
                 #{<<"en">> => Binary};
-
             [] ->
                 extract_doc_contents("./description/fullDescription", Doc)
         end,
     Metadata = edoc_extract_metadata(Doc),
     docs_v1_entry(function, Name, Arity, Metadata, DocContents).
 
-% %% @doc Extract XML docs from `XMLPath' in `OTPRootDir' and convert it to docs chunk.
+%% @doc Extract XML docs from `XMLPath' in `OTPRootDir' and convert it to docs chunk.
 otp_xml_to_chunk(OTPRootDir, XMLPath) ->
     Doc = load_otp_xml(OTPRootDir, filename:join([OTPRootDir, XMLPath])),
     DocContents = extract_doc_contents("//description", Doc),
     Docs = otp_xml_extract_docs(Doc, XMLPath),
     docs_v1(DocContents, #{}, Docs).
 
-% TODO: extract types and callbacks too
+%% TODO: extract types and callbacks too
 otp_xml_extract_docs(Doc, XMLPath) ->
     List = [otp_xml_extract_function(Doc1, XMLPath) || Doc1 <- xmerl_xpath:string("./funcs/func", Doc)],
     lists:filter(fun(Elem) -> Elem /= skip end, List).
@@ -145,17 +137,14 @@ otp_xml_extract_function(Doc, XMLPath) ->
         false ->
             Arity = xpath_to_integer("./name/@arity", Doc),
             DocContents = extract_doc_contents("./desc", Doc),
-
             % case Name of
             %     take ->
             %         'Elixir.IO':inspect(xmerl_xpath:string("//desc", Doc)),
             %         'Elixir.IO':inspect(DocString),
             %         ok;
-
             %     _ ->
             %         ok
             % end,
-
             docs_v1_entry(function, Name, Arity, #{}, DocContents)
     end.
 
