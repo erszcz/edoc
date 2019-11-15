@@ -59,7 +59,7 @@
 %% @since 0.0.1
 -spec edoc_to_chunk(string()) -> docs_v1().
 edoc_to_chunk(ErlPath) ->
-    Includes = ["include", "/Users/wojtek/src/brod/_build/default/lib"],
+    Includes = ["include", "src"],
     {_Module, Doc} = edoc:get_doc(ErlPath, [{preprocess, true}, {includes, Includes}]),
     [Doc] = xmerl_xpath:string("//module", Doc),
     Metadata = edoc_extract_metadata(Doc),
