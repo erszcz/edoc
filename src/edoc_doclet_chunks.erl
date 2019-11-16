@@ -110,14 +110,17 @@ source({M, Name, Path}, Dir, Suffix, Env, OkSet, Private, Hidden, ErrorFlag, Opt
     File = filename:join(Path, Name),
     try
 	Chunk = edoc_chunks:edoc_to_chunk(File),
-	Options = [{encoding, utf8}],
-	ok = write_file(Chunk, Dir, Name, Options),
+	WriteOptions = [{encoding, utf8}],
+	ok = write_file(term_to_binary(Chunk), Dir, chunk_file_name(Name, Suffix), WriteOptions),
 	{sets:add_element(Name, OkSet), ErrorFlag}
     catch ?STACKTRACE(_, R, St)
 	report("skipping source file '~ts': ~tP.", [File, R, 15]),
 	io:format("stacktrace:\n~p\n", [St]),
 	{OkSet, true}
     end.
+
+chunk_file_name(ErlName, Suffix) ->
+    string:join([filename:basename(ErlName, ".erl"), Suffix], "").
 
 write_file(Text, Dir, Name, Options) ->
     File = filename:join([Dir, Name]),

@@ -64,7 +64,7 @@ edoc_to_chunk(ErlPath) ->
     Chunk.
 
 extract_doc_contents(XPath, Doc) ->
-    case xpath_to_binary("./@private", Doc) of
+    case string:trim(xpath_to_binary("./@private", Doc)) of
         <<"yes">> ->
             hidden;
         <<"">> ->
@@ -193,19 +193,23 @@ docs_v1_entry(Kind, Name, Arity, Metadata, DocContents) ->
     {{Kind, Name, Arity}, Anno, Signature, DocContents, Metadata}.
 
 xpath_to_binary(XPath, Doc) ->
-    to_markdown(xmerl_xpath:string(XPath, Doc)).
+    string:trim(to_markdown(xmerl_xpath:string(XPath, Doc))).
 
 xpath_to_atom(XPath, Doc) ->
-    binary_to_atom(to_markdown(xmerl_xpath:string(XPath, Doc)), utf8).
+    binary_to_atom(string:trim(to_markdown(xmerl_xpath:string(XPath, Doc))), utf8).
 
 xpath_to_integer(XPath, Doc) ->
-    binary_to_integer(to_markdown(xmerl_xpath:string(XPath, Doc))).
+    binary_to_integer(string:trim(to_markdown(xmerl_xpath:string(XPath, Doc)))).
 
 to_markdown(Term) ->
     iolist_to_binary(format_edoc(Term)).
 
 %% @type xml_element_content(). `#xmlElement.content' as defined by `xmerl.hrl'.
--type xml_element_content() :: [#xmlElement{} | #xmlText{} | #xmlPI{} | #xmlComment{} | #xmlDecl{}].
+-type xml_element_content() :: [ #xmlElement{}
+                               | #xmlText{}
+                               | #xmlPI{}
+                               | #xmlComment{}
+                               | #xmlDecl{} ].
 
 -spec format_edoc(xml_element_content()) -> iolist().
 format_edoc(Content) ->
@@ -221,6 +225,9 @@ format_content(Content, Ctx) ->
 format_content_(#xmlPI{}, _Ctx)      -> [];
 format_content_(#xmlComment{}, _Ctx) -> [];
 format_content_(#xmlDecl{}, _Ctx)    -> [];
+
+format_content_(#xmlAttribute{} = Attr, _Ctx) ->
+    [{i, Attr#xmlAttribute.value}];
 
 format_content_(#xmlText{} = T, Ctx) ->
     Text = T#xmlText.value,
