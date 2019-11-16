@@ -202,65 +202,142 @@ xpath_to_integer(XPath, Doc) ->
     binary_to_integer(to_markdown(xmerl_xpath:string(XPath, Doc))).
 
 to_markdown(Term) ->
-    iolist_to_binary(do_to_markdown(Term)).
+    iolist_to_binary(format_edoc(Term)).
 
-do_to_markdown(List) when is_list(List) ->
-    lists:join("", lists:map(fun do_to_markdown/1, List));
-do_to_markdown(#xmlElement{name=p, content=Content}) ->
-    [do_to_markdown(Content), "\n\n"];
-do_to_markdown(#xmlElement{name=pre, content=Content}) ->
-    code_block(Content);
-do_to_markdown(#xmlElement{name=c, content=Content}) ->
-    code_inline(Content);
-do_to_markdown(#xmlElement{name=expr, content=Content}) ->
-    code_inline(Content);
-do_to_markdown(#xmlElement{name=code, content=Content}) ->
-    case is_otp_xml(Content) of
-        true -> code_block(Content);
-        false -> code_inline(Content)
+%% @type xml_element_content(). `#xmlElement.content' as defined by `xmerl.hrl'.
+-type xml_element_content() :: [#xmlElement{} | #xmlText{} | #xmlPI{} | #xmlComment{} | #xmlDecl{}].
+
+-spec format_edoc(xml_element_content()) -> iolist().
+format_edoc(Content) ->
+    Ctx = #{},
+    lists:map(fun
+                  ({br})        -> "\n";
+                  ({i, Inline}) -> [Inline]
+              end, end_block(format_content(Content, Ctx))).
+
+format_content(Content, Ctx) ->
+    lists:flatten([ format_content_(C, Ctx) || C <- Content ]).
+
+format_content_(#xmlPI{}, _Ctx)      -> [];
+format_content_(#xmlComment{}, _Ctx) -> [];
+format_content_(#xmlDecl{}, _Ctx)    -> [];
+
+format_content_(#xmlText{} = T, Ctx) ->
+    Text = T#xmlText.value,
+    case edoc_lib:is_space(Text) of
+        true -> [];
+        false ->
+            case is_preformatted(T#xmlText.parents) of
+                true  -> cleanup_preformatted_text(Text, Ctx);
+                false -> cleanup_text(Text, Ctx)
+            end
     end;
-do_to_markdown(#xmlElement{name=item, content=Content}) ->
-    ["  * ", do_to_markdown(Content)];
-do_to_markdown(#xmlElement{content=Content}) ->
-    do_to_markdown(Content);
-do_to_markdown(#xmlAttribute{value=Value}) ->
-    to_binary(Value);
-do_to_markdown(#xmlText{value=Value}) ->
-    clean_whitespace(Value).
 
-clean_whitespace(Value) ->
-    re:replace(unicode:characters_to_binary(Value), "\\s+", " ", [global]).
+format_content_(#xmlElement{name = Name, content = Content} = E, Ctx) ->
+    format_element(Name, E, format_content(Content, Ctx), Ctx).
 
-code_block(List) when is_list(List) ->
-    [
-     "\n```\n",
-     trim_leading(lists:join("", lists:map(fun code_block/1, List)), "\n"),
-     "\n```\n"
-    ];
-code_block(#xmlText{value=Value}) ->
-    to_binary(Value);
-code_block(#xmlElement{name=input, content=[#xmlText{value=Value}]}) ->
-    to_binary(Value);
-code_block(#xmlElement{name=anno, content=[#xmlText{value=Value}]}) ->
-    to_binary(Value).
+format_element(h1, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx);
+format_element(h2, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx);
+format_element(h3, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx);
+format_element(h4, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx);
+format_element(h5, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx);
+format_element(h6, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx);
+format_element(hgroup, _, _Lines, _Ctx) -> [];
+format_element(code, #xmlElement{}, Lines, _Ctx) ->
+    Lines;
+format_element(dl, #xmlElement{}, Lines, _Ctx) ->
+    end_block(Lines);
+format_element(dt, #xmlElement{}, Lines, _Ctx) ->
+    dl_item("  ", Lines);
+format_element(dd, #xmlElement{}, Lines, _Ctx) ->
+    dl_item("      ", Lines);
+format_element(p, #xmlElement{}, Lines, _Ctx) ->
+    end_block(lists:dropwhile(fun
+                                  ({br}) -> true;
+                                  (_) -> false
+                              end, Lines));
+format_element(pre, #xmlElement{}, Lines, _Ctx) ->
+    end_block(Lines);
+format_element(ol, #xmlElement{} = E, ListItems, Ctx) ->
+    lists:all(fun ({li, _}) -> true; (_) -> false end, ListItems)
+        orelse erlang:error({non_list_item_children, ListItems}, [ol, E, ListItems, Ctx]),
+    end_block([ [{i, io_lib:format("  ~b. ", [Index])}, FirstItem, IndentedRest, {br}]
+                || {Index, {li, [FirstItem | Rest]}} <- enumerate(ListItems),
+                   IndentedRest <- [prepend("    ", Rest)] ]);
+format_element(ul, #xmlElement{} = E, ListItems, Ctx) ->
+    lists:all(fun ({li, _}) -> true; (_) -> false end, ListItems)
+        orelse erlang:error({non_list_item_children, ListItems}, [ul, E, ListItems, Ctx]),
+    end_block([ [{i, "  - "}, FirstItem, IndentedRest, {br}]
+                || {li, [FirstItem | Rest]} <- ListItems,
+                   IndentedRest <- [prepend("    ", Rest)] ]);
+format_element(li, #xmlElement{}, Lines, _Ctx) ->
+    [{li, Lines}];
+format_element(_, #xmlElement{}, Lines, _Ctx) ->
+    Lines.
 
-code_inline(List) when is_list(List) ->
-    lists:join("", lists:map(fun code_inline/1, List));
-code_inline(#xmlElement{name=anno, content=[#xmlText{} = XmlText]}) ->
-    code_inline(XmlText);
-code_inline(#xmlText{value=Value}) ->
-    ["`", to_binary(Value), "`"].
+format_header(#xmlElement{name = Name}, Lines, _Ctx) ->
+    Headers = #{h1 => "# ",
+                h2 => "## ",
+                h3 => "### ",
+                h4 => "#### ",
+                h5 => "##### ",
+                h6 => "###### "},
+    case Name of
+        hgroup -> [];
+        _ ->
+            [{i, Text}] = Lines,
+            end_block([{br}, {i, [maps:get(Name, Headers), Text]}])
+    end.
 
-to_binary(String) ->
-    unicode:characters_to_binary(String).
+cleanup_text(Text, _Ctx) ->
+    lists:flatmap(fun
+                      ("\n") -> [{br}];
+                      (T) ->
+                          case edoc_lib:is_space(T) of
+                              true -> [];
+                              false -> [{i, T}]
+                          end
+                  end,
+                  split(Text, "\s*(\n)\s*", [trim, {return, list}])).
 
-trim_leading(String, Trim) ->
-      re:replace(unicode:characters_to_binary(String), "^" ++ Trim, "", [global]).
+cleanup_preformatted_text(Text, _Ctx) ->
+    lists:flatmap(fun
+                      ("\n") -> [{br}];
+                      (T) -> [{i, T}]
+                  end,
+                  split(Text, "(\n)", [{return, list}])).
 
-is_otp_xml(List) when is_list(List) ->
+split(Text, Pattern, Opts) ->
+    re:split(Text, Pattern, Opts).
+
+is_preformatted(Parents) ->
     lists:any(fun
-                  (#xmlText{parents=Parents}) ->
-                      proplists:get_value(erlref, Parents) /= undefined;
-                  (_) ->
-                      false
-              end, List).
+                  ({pre, _}) -> true;
+                  (_) -> false
+              end, Parents).
+
+prepend(Prefix, Doc) -> prepend(Prefix, lists:reverse(Doc), []).
+
+prepend(_Prefix, [], Acc) -> Acc;
+prepend( Prefix, [{br} | Doc], [] = Acc) -> prepend(Prefix, Doc, [{br} | Acc]);
+prepend( Prefix, [{br} | Doc], [{br}] = Acc) -> prepend(Prefix, Doc, [{br} | Acc]);
+prepend( Prefix, [{br} | Doc], [{br}, {br}] = Acc) -> prepend(Prefix, Doc, Acc);
+prepend( Prefix, [{br} | Doc], Acc) -> prepend(Prefix, Doc, [{br}, {i, Prefix} | Acc]);
+prepend( Prefix, [Node | Doc], Acc) -> prepend(Prefix, Doc, [Node | Acc]).
+
+enumerate(List) ->
+    lists:zip(lists:seq(1, length(List)), List).
+
+end_block(Doc) -> end_block([{br}, {br} | lists:reverse(lists:flatten(Doc))], []).
+
+end_block([], Acc) -> Acc;
+end_block([{br} | Doc], [] = Acc) -> end_block(Doc, [{br} | Acc]);
+end_block([{br} | Doc], [{br}] = Acc) -> end_block(Doc, [{br} | Acc]);
+end_block([{br} | Doc], [{br}, {br}] = Acc) -> end_block(Doc, Acc);
+end_block([Node | Doc], Acc) -> end_block(Doc, [Node | Acc]).
+
+dl_item(Prefix, Lines) ->
+    [First | Rest] = Lines,
+    end_block([{i, Prefix}, First, prepend(Prefix, Rest)]).
+
+%%. vim: foldmethod=marker foldmarker=%%',%%.
