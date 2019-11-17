@@ -40,7 +40,8 @@
 -include("../include/edoc_doclet.hrl").
 
 %-define(EDOC_APP, edoc).
--define(DEFAULT_FILE_SUFFIX, ".docs.chunk").
+-define(DEFAULT_FILE_SUFFIX, ".chunk").
+-define(CHUNKS_SUBDIR, "chunks").
 %-define(INDEX_FILE, "index.html").
 %-define(OVERVIEW_FILE, "overview.edoc").
 %-define(OVERVIEW_SUMMARY, "overview-summary.html").
@@ -62,7 +63,7 @@ run(#doclet_toc{} = Cmd, Ctxt) ->
     %toc(Cmd#doclet_toc.paths, Ctxt).
 
 gen(Sources, App, Modules, Ctxt) ->
-    Dir = Ctxt#doclet_context.dir,
+    Dir = filename:join(Ctxt#doclet_context.dir, ?CHUNKS_SUBDIR),
     Env = Ctxt#doclet_context.env,
     Options = Ctxt#doclet_context.opts,
     {Modules1, Error} = sources(Sources, Dir, Modules, Env, Options),
@@ -120,10 +121,10 @@ source({M, Name, Path}, Dir, Suffix, Env, OkSet, Private, Hidden, ErrorFlag, Opt
 chunk_file_name(ErlName, Suffix) ->
     string:join([filename:basename(ErlName, ".erl"), Suffix], "").
 
-write_file(Text, Dir, Name, Options) ->
+write_file(Data, Dir, Name, Options) ->
     File = filename:join([Dir, Name]),
     ok = filelib:ensure_dir(File),
-    case file:write_file(File, Text) of
+    case file:write_file(File, Data) of
 	ok -> ok;
 	{error, R} ->
 	    R1 = file:format_error(R),
