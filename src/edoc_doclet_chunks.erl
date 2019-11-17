@@ -39,8 +39,6 @@
 %% @headerfile "../include/edoc_doclet.hrl"
 -include("../include/edoc_doclet.hrl").
 
--include("edoc_stacktrace.hrl").
-
 %-define(EDOC_APP, edoc).
 -define(DEFAULT_FILE_SUFFIX, ".docs.chunk").
 %-define(INDEX_FILE, "index.html").
@@ -113,7 +111,7 @@ source({M, Name, Path}, Dir, Suffix, Env, OkSet, Private, Hidden, ErrorFlag, Opt
 	WriteOptions = [{encoding, utf8}],
 	ok = write_file(term_to_binary(Chunk), Dir, chunk_file_name(Name, Suffix), WriteOptions),
 	{sets:add_element(Name, OkSet), ErrorFlag}
-    catch ?STACKTRACE(_, R, St)
+    catch _:R:St ->
 	report("skipping source file '~ts': ~tP.", [File, R, 15]),
 	io:format("stacktrace:\n~p\n", [St]),
 	{OkSet, true}
