@@ -252,7 +252,7 @@ format_element(h5, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx
 format_element(h6, #xmlElement{} = E, Lines, Ctx) -> format_header(E, Lines, Ctx);
 format_element(hgroup, _, _Lines, _Ctx) -> [];
 format_element(code, #xmlElement{}, Lines, _Ctx) ->
-    Lines;
+    [{i, "`"}, Lines, {i, "`"}];
 format_element(dl, #xmlElement{}, Lines, _Ctx) ->
     end_block(Lines);
 format_element(dt, #xmlElement{}, Lines, _Ctx) ->
@@ -265,7 +265,9 @@ format_element(p, #xmlElement{}, Lines, _Ctx) ->
                                   (_) -> false
                               end, Lines));
 format_element(pre, #xmlElement{}, Lines, _Ctx) ->
-    end_block(Lines);
+    end_block([{i, "```"}, {br},
+	       Lines,
+	       {br}, {i, "```"}]);
 format_element(ol, #xmlElement{} = E, ListItems, Ctx) ->
     lists:all(fun ({li, _}) -> true; (_) -> false end, ListItems)
         orelse erlang:error({non_list_item_children, ListItems}, [ol, E, ListItems, Ctx]),
