@@ -82,12 +82,11 @@ process_file(_State, EbinDir, ErlPath) ->
     Basename = filename:basename(ErlPath, ".erl"),
     BeamPath = filename:join([EbinDir, Basename ++ ".beam"]),
     Docs = edoc_chunks:edoc_to_chunk(ErlPath),
-    {ok, NewBeam} = add_chunks(BeamPath, [make_docs_chunk(Docs)]),
+    {ok, NewBeam} = store_chunk(BeamPath, "Docs", Docs),
     ok = file:write_file(BeamPath, NewBeam).
 
-make_docs_chunk(Docs) ->
-    {"Docs", term_to_binary(Docs, [compressed])}.
-
-add_chunks(BeamFile, NewChunks) ->
-    {ok, _, OldChunks} = beam_lib:all_chunks(BeamFile),
-    {ok, _NewBEAM} = beam_lib:build_module(OldChunks ++ NewChunks).
+store_chunk(BeamPath, ChunkName, Chunk) ->
+    {ok, _, AllChunks} = beam_lib:all_chunks(BeamPath),
+    ChunkEntry = {ChunkName, term_to_binary(Chunk, [compressed])},
+    NewChunks = lists:keystore(ChunkName, 1, AllChunks, ChunkEntry),
+    {ok, _NewBEAM} = beam_lib:build_module(NewChunks).
