@@ -16,7 +16,8 @@
               metadata/0,
               signature/0]).
 
--include_lib("edoc/include/docs_v1.hrl").
+%-include_lib("edoc/include/docs_v1.hrl").
+-include("docs_v1.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
 
 %% @type docs_v1(). The Docs v1 chunk according to EEP 48.

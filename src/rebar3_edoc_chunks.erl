@@ -5,17 +5,18 @@
 %% ```
 %% {plugins,
 %%  [
-%%   {rebar3_docsh, "0.7.2", {pkg, docsh}}
+%%   %% Avoid name clash with OTP EDoc until the fork is merged.
+%%   {rebar3_edoc_chunks, {git, "https://github.com/erszcz/edoc.git"}}
 %%  ]}.
 %%
 %% {provider_hooks,
 %%  [
-%%   {post, [{compile, {docsh, compile}}]}
+%%   {post, [{compile, {edoc_chunks, compile}}]}
 %%  ]}.
 %% '''
 %%
 %% @end
--module(rebar3_docsh).
+-module(rebar3_edoc_chunks).
 
 -behaviour(provider).
 -export([init/1,
@@ -26,18 +27,17 @@
 -define(DEPS, [{default, compile}]).
 -define(SHORT_DESC, "Store modules' documentation in Docs chunks according to EEP-48").
 -define(DESC, "Store modules' documentation in Docs chunks according to EEP-48.\n"
-              "This exposes Erlang module documentation to Elixir and other BEAM languages.\n"
-              "Use https://github.com/erszcz/docsh to access your docs in an Erlang shell.\n").
+              "This exposes Erlang module documentation to Elixir and other BEAM languages.\n").
 
-%% ===================================================================
+%%
 %% Public API
-%% ===================================================================
+%%
 
 -spec init(rebar_state:t()) -> {ok, rebar_state:t()}.
 init(State) ->
     POpts = [
              {name, ?PROVIDER},             % The 'user friendly' name of the task
-             {namespace, docsh},
+             {namespace, edoc_chunks},
              {module, ?MODULE},             % The module implementation of the task
              {bare, true},                  % The task can be run by the user, always true
              {deps, ?DEPS},                 % The list of dependencies
@@ -61,39 +61,29 @@ do(State) ->
 
 -spec format_error(any()) -> iolist().
 format_error(Reason) ->
-    docsh_lib:format_error(Reason).
+    io:format("error: ~p\n", [Reason]).
 
-%% ===================================================================
+%%
 %% Helpers
-%% ===================================================================
+%%
 
 -spec process_app(rebar_state:t(), rebar_app_info:t()) -> ok.
 process_app(State, App) ->
-    BEAMs = app_beam_files(App),
-    [ process_beam(State, B) || B <- BEAMs ],
+    Dir = rebar_app_info:dir(App),
+    EbinDir = rebar_app_info:ebin_dir(App),
+    %% TODO: this will not work for non-flat src/ hierarchies
+    Wildcard = filename:join([Dir, "src", "*.erl"]),
+    Files = filelib:wildcard(Wildcard),
+    [ process_file(State, EbinDir, F) || F <- Files ],
     ok.
 
--spec app_beam_files(rebar_app_info:t()) -> [file:filename()].
-app_beam_files(App) ->
-    EbinDir = rebar_app_info:ebin_dir(App),
-    filelib:wildcard(filename:join([EbinDir, "*.beam"])).
-
--spec process_beam(rebar_state:t(), file:filename()) -> ok.
-process_beam(_State, BeamFile) ->
-    case docsh_lib:has_docs(BeamFile) of
-        true ->
-            ok;
-        false ->
-            {ok, B} = docsh_beam:from_beam_file(BeamFile),
-            {ok, Docs, Warnings} = docsh_lib:make_docs(B),
-            print_warnings(docsh_beam:name(B), Warnings),
-            DocsChunk = make_docs_chunk(Docs),
-            {ok, NewBeam} = add_chunks(BeamFile, [DocsChunk]),
-            ok = file:write_file(BeamFile, NewBeam)
-    end.
-
-print_warnings(Name, Warnings) ->
-    [ docsh_lib:print("~s", [docsh_lib:format_error({W, Name})]) || W <- Warnings ].
+-spec process_file(rebar_state:t(), file:filename(), file:filename()) -> ok.
+process_file(_State, EbinDir, ErlPath) ->
+    Basename = filename:basename(ErlPath, ".erl"),
+    BeamPath = filename:join([EbinDir, Basename ++ ".beam"]),
+    Docs = edoc_chunks:edoc_to_chunk(ErlPath),
+    {ok, NewBeam} = add_chunks(BeamPath, [make_docs_chunk(Docs)]),
+    ok = file:write_file(BeamPath, NewBeam).
 
 make_docs_chunk(Docs) ->
     {"Docs", term_to_binary(Docs, [compressed])}.
