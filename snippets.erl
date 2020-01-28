@@ -1,6 +1,6 @@
 {ok, {_, [{_, BDocs}]}} = beam_lib:chunks(code:which(edoc), ["Docs"]).
-Docs = erlang:binary_to_term(BDocs).                                     
-rr(edoc_chunks).           
+Docs = erlang:binary_to_term(BDocs).
+rr(edoc_chunks).
 Entries = Docs#docs_v1.docs.
 [ E || {{type, _, _}, _, _, _, _} = E <- Entries ].
 
@@ -17,6 +17,9 @@ Entries = Docs#docs_v1.docs.
 %% > % {{:type, :filename, 0}, 0, ["filename/0"], :none, %{}}
 
 {ok, {_, [{_, BDbgi}]}} = beam_lib:chunks(code:which(edoc), ["Dbgi"]).
-Dbgi = erlang:binary_to_term(BDbgi).                                
+Dbgi = erlang:binary_to_term(BDbgi).
 {_, _, {AST, _}} = Dbgi = erlang:binary_to_term(BDbgi).
-[ Form || {attribute, _, _, _} = Form <- AST ].   
+[ Form || {attribute, _, _, _} = Form <- AST ].
+
+{ok, BChunk} = file:read_file("doctest/chunks/edoc.chunk").
+Chunk = binary_to_term(BChunk).
