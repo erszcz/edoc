@@ -1,4 +1,4 @@
--module(edoc_layout_chunk_markdown).
+-module(edoc_layout_chunk_htmltree).
 
 -behaviour(edoc_layout).
 -export([module/2]).
@@ -13,5 +13,5 @@ module(Doc, Options0) ->
 
 %-spec format(XMLDoc :: xml_element_content()) -> any().
 format(XMLDoc) ->
-    %% TODO: inline the impl
-    edoc_chunks:format_edoc(XMLDoc).
+    %% TODO: write the new impl
+    erlang:error(not_implemented).

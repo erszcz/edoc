@@ -21,5 +21,12 @@ Dbgi = erlang:binary_to_term(BDbgi).
 {_, _, {AST, _}} = Dbgi = erlang:binary_to_term(BDbgi).
 [ Form || {attribute, _, _, _} = Form <- AST ].
 
+f().
+edoc:files(["src/edoc.erl"], [{doclet, edoc_doclet_chunks}, {dir, "doctest"}]).
+{ok, BChunk} = file:read_file("doctest/chunks/edoc.chunk").
+Chunk = binary_to_term(BChunk).
+
+f().
+edoc:files(["src/edoc.erl"], [{doclet, edoc_doclet_chunks}, {dir, "doctest"}, {layout, edoc_layout_chunk_htmltree}]).
 {ok, BChunk} = file:read_file("doctest/chunks/edoc.chunk").
 Chunk = binary_to_term(BChunk).
