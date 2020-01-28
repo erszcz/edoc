@@ -34,6 +34,8 @@
 
 -export([module/2, overview/2, type/1]).
 
+-callback module(_, _) -> any().
+
 -import(edoc_report, [report/2]).
 
 -include_lib("xmerl/include/xmerl.hrl").

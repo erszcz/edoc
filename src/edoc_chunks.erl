@@ -2,7 +2,7 @@
 %% @since 0.12
 -module(edoc_chunks).
 
--export([edoc_to_chunk/1,
+-export([edoc_to_chunk/1, edoc_to_chunk/2,
          otp_xml_to_chunk/2,
          write_chunk/2]).
 
@@ -57,6 +57,10 @@
 edoc_to_chunk(ErlPath) ->
     Includes = ["include", "src"],
     {_Module, Doc} = edoc:get_doc(ErlPath, [{preprocess, true}, {includes, Includes}]),
+    edoc_to_chunk(Doc, []).
+
+-spec edoc_to_chunk(_, _) -> docs_v1().
+edoc_to_chunk(Doc, _Opts) ->
     [Doc] = xmerl_xpath:string("//module", Doc),
     Metadata = edoc_extract_metadata(Doc),
     DocContents = extract_doc_contents("./description/fullDescription", Doc),

@@ -88,19 +88,31 @@ sources(Sources, Dir, Modules, Env, Options) ->
 %% Add its name to the set if it was successful.
 %% Errors are just flagged at this stage,
 %% allowing all source files to be processed even if some of them fail.
-source({_M, Name, Path}, Dir, Suffix, _Env, OkSet, _Private, _Hidden, ErrorFlag, _Options) ->
+source({_M, Name, Path}, Dir, Suffix, Env, OkSet, _Private, _Hidden, ErrorFlag, Options0) ->
     File = filename:join(Path, Name),
     try
+	Options = options_with_defaults(Options0),
+	{_Module, Doc} = edoc:get_doc(File, Env, Options),
 	%% TODO: edoc_doclet_default does check_name, check for private, and check for hidden here
-	Chunk = edoc_chunks:edoc_to_chunk(File),
+	Chunk = edoc:layout(Doc, Options),
 	WriteOptions = [{encoding, utf8}],
-	ok = write_file(term_to_binary(Chunk), Dir, chunk_file_name(Name, Suffix), WriteOptions),
+	ok = write_file(Chunk, Dir, chunk_file_name(Name, Suffix), WriteOptions),
 	{sets:add_element(Name, OkSet), ErrorFlag}
     catch _:R:St ->
 	report("skipping source file '~ts': ~tP.", [File, R, 15]),
 	io:format("stacktrace:\n~p\n", [St]),
 	{OkSet, true}
     end.
+
+options_with_defaults(Options) ->
+    Includes = ["include", "src"],
+    Defaults = #{includes => Includes,
+		 layout => default_chunk_layout(),
+		 preprocess => true},
+    maps:to_list(maps:merge(Defaults, maps:from_list(Options))).
+
+default_chunk_layout() ->
+    edoc_layout_chunk_markdown.
 
 chunk_file_name(ErlName, Suffix) ->
     string:join([filename:basename(ErlName, ".erl"), Suffix], "").
