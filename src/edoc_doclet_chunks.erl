@@ -88,10 +88,9 @@ sources(Sources, Dir, Modules, Env, Options) ->
 %% Add its name to the set if it was successful.
 %% Errors are just flagged at this stage,
 %% allowing all source files to be processed even if some of them fail.
-source({_M, Name, Path}, Dir, Suffix, Env, OkSet, _Private, _Hidden, ErrorFlag, Options0) ->
+source({_M, Name, Path}, Dir, Suffix, Env, OkSet, _Private, _Hidden, ErrorFlag, Options) ->
     File = filename:join(Path, Name),
     try
-	Options = options_with_defaults(Options0),
 	{_Module, Doc} = edoc:get_doc(File, Env, Options),
 	%% TODO: edoc_doclet_default does check_name, check for private, and check for hidden here
 	Chunk = edoc:layout(Doc, Options),
@@ -103,13 +102,6 @@ source({_M, Name, Path}, Dir, Suffix, Env, OkSet, _Private, _Hidden, ErrorFlag, 
 	io:format("stacktrace:\n~p\n", [St]),
 	{OkSet, true}
     end.
-
-options_with_defaults(Options) ->
-    Includes = ["include", "src"],
-    Defaults = #{includes => Includes,
-		 layout => default_chunk_layout(),
-		 preprocess => true},
-    maps:to_list(maps:merge(Defaults, maps:from_list(Options))).
 
 default_chunk_layout() ->
     edoc_layout_chunk_markdown.
