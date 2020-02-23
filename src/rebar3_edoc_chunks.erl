@@ -69,24 +69,8 @@ format_error(Reason) ->
 
 -spec process_app(rebar_state:t(), rebar_app_info:t()) -> ok.
 process_app(State, App) ->
-    Dir = rebar_app_info:dir(App),
-    EbinDir = rebar_app_info:ebin_dir(App),
-    %% TODO: this will not work for non-flat src/ hierarchies
-    Wildcard = filename:join([Dir, "src", "*.erl"]),
-    Files = filelib:wildcard(Wildcard),
-    [ process_file(State, EbinDir, F) || F <- Files ],
+    EdocOpts = [{doclet, edoc_doclet_chunks},
+		{layout, edoc_layout_chunk_htmltree},
+		{preprocess, true}],
+    edoc:application(binary_to_atom(rebar_app_info:name(App), utf8), EdocOpts),
     ok.
-
--spec process_file(rebar_state:t(), file:filename(), file:filename()) -> ok.
-process_file(_State, EbinDir, ErlPath) ->
-    Basename = filename:basename(ErlPath, ".erl"),
-    BeamPath = filename:join([EbinDir, Basename ++ ".beam"]),
-    Docs = edoc_chunks:edoc_to_chunk(ErlPath),
-    {ok, NewBeam} = store_chunk(BeamPath, "Docs", Docs),
-    ok = file:write_file(BeamPath, NewBeam).
-
-store_chunk(BeamPath, ChunkName, Chunk) ->
-    {ok, _, AllChunks} = beam_lib:all_chunks(BeamPath),
-    ChunkEntry = {ChunkName, term_to_binary(Chunk, [compressed])},
-    NewChunks = lists:keystore(ChunkName, 1, AllChunks, ChunkEntry),
-    {ok, _NewBEAM} = beam_lib:build_module(NewChunks).
