@@ -45,6 +45,7 @@ ReadChunk = fun (File) ->
 ReadChunk("doctest/recon-chunks/chunks/recon.chunk").
 ReadChunk("doctest/recon-markdown-chunks/chunks/recon.chunk").
 ReadChunk("doctest/stdlib-chunks/chunks/ets.chunk").
+ReadChunk("/Users/erszcz/apps/erlang/shell_docs_dfa2189/lib/lib/stdlib-3.11.2/doc/chunks/shell_docs.chunk").
 
 %% This fails on missing logger.hrl...
 edoc:application(recon, [{doclet, edoc_doclet_chunks},
