@@ -47,17 +47,13 @@ format_content_(#xmlText{} = T, Ctx) ->
     Text = T#xmlText.value,
     iolist_to_binary(Text);
 
-format_content_(#xmlElement{name = Name, content = Content} = E, Ctx) ->
+format_content_(#xmlElement{} = E, Ctx) ->
+    #xmlElement{name = Name, content = Content, attributes = Attributes} = E,
     case is_html_tag(Name) of
 	false ->
 	    format_content(Content, Ctx);
 	true ->
-	    case E#xmlElement.attributes of
-		[] ->
-		    [{Name, format_content(Content, Ctx)}];
-		[_|_] = Attributes ->
-		    [{Name, format_content(Attributes, Ctx), format_content(Content, Ctx)}]
-	    end
+	    [{Name, format_content(Attributes, Ctx), format_content(Content, Ctx)}]
     end.
 
 -spec is_html_tag(atom()) -> boolean().

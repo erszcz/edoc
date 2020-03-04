@@ -118,10 +118,10 @@ edoc_extract_function(Doc, Opts) ->
     DocContents =
         case xmerl_xpath:string("./equiv", Doc) of
             [Equiv] ->
+                %% TODO: use new link syntax here
                 Expr = xpath_to_text("./expr", Equiv, Opts),
                 See = xpath_to_text("./see", Equiv, Opts),
-                Binary = iolist_to_binary(["Equivalent to ", "[", Expr, "](`", See, "`)."]),
-                #{<<"en">> => Binary};
+                [iolist_to_binary(["Equivalent to ", "[", Expr, "](`", See, "`)."])];
             [] ->
                 extract_doc_contents("./description/fullDescription", Doc, Opts)
         end,
@@ -143,15 +143,15 @@ docs_v1(DocContents, Metadata, Docs) ->
     % TODO fill these in
     Anno = 0,
     BeamLanguage = erlang,
-    Format = <<"text/markdown">>,
-    {docs_v1, Anno, BeamLanguage, Format, DocContents, Metadata, Docs}.
+    Format = <<"application/erlang+html">>,
+    {docs_v1, Anno, BeamLanguage, Format, #{<<"en">> => DocContents}, Metadata, Docs}.
 
 docs_v1_entry(Kind, Name, Arity, Metadata, DocContents) ->
     % TODO fill these in
     Anno = 0,
     % TODO get signature from abstract code
     Signature = [list_to_binary(atom_to_list(Name) ++ "/" ++ integer_to_list(Arity))],
-    {{Kind, Name, Arity}, Anno, Signature, DocContents, Metadata}.
+    {{Kind, Name, Arity}, Anno, Signature, #{<<"en">> => DocContents}, Metadata}.
 
 xpath_to_text(XPath, Doc, Opts) ->
     string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts)).
