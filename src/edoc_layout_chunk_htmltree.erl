@@ -49,32 +49,21 @@ format_content_(#xmlText{} = T, Ctx) ->
 
 format_content_(#xmlElement{} = E, Ctx) ->
     #xmlElement{name = Name, content = Content, attributes = Attributes} = E,
-    case is_html_tag(Name) of
-	false ->
+    case {is_edoc_tag(Name), is_html_tag(Name)} of
+	{true, _} ->
 	    format_content(Content, Ctx);
-	true ->
+	{_, false} ->
+	    edoc_report:warning("'~s' is not accepted - skipping tag, extracting content", [Name]),
+	    format_content(Content, Ctx);
+	_ ->
 	    [{Name, format_content(Attributes, Ctx), format_content(Content, Ctx)}]
     end.
 
+-spec is_edoc_tag(atom()) -> boolean().
+is_edoc_tag(fullDescription) -> true;
+is_edoc_tag(_) -> false.
+
 -spec is_html_tag(atom()) -> boolean().
 is_html_tag(Tag) ->
-    %% All tags, even the deprecated and obsoleted ones,
-    %% from https://developer.mozilla.org/en-US/docs/Web/HTML/Element
-    %% Last modified: Jan 26, 2020, by MDN contributors
-    %% TODO: drop deprecated and obsoleted tags?
-    Tags = [
-	    html, base, head, link, meta, style, title, body, address, article, aside, footer,
-	    header, h1, h2, h3, h4, h5, h6, hgroup, main, nav, section, blockquote, dd, 'div', dl,
-	    dt, figcaption, figure, hr, li, main, ol, p, pre, ul, a, abbr, b, bdi, bdo, br, cite,
-	    code, data, dfn, em, i, kbd, mark, q, rb, rp, rt, rtc, ruby, s, samp, small, span,
-	    strong, sub, sup, time, u, var, wbr, area, audio, img, map, track, video, embed,
-	    iframe, object, param, picture, source, canvas, noscript, script, del, ins, caption,
-	    col, colgroup, table, tbody, td, tfoot, th, thead, tr, button, datalist, fieldset,
-	    form, input, label, legend, meter, optgroup, option, output, progress, select,
-	    textarea, details, dialog, menu, summary, slot, template,
-	    %% deprecated start here
-	    acronym, applet, basefont, bgsound, big, blink, center, command, content, dir, element,
-	    font, frame, frameset, image, isindex, keygen, listing, marquee, menuitem, multicol,
-	    nextid, nobr, noembed, noframes, plaintext, shadow, spacer, strike, tt, xmp
-	   ],
+    Tags = [a,p,h1,h2,h3,i,br,em,pre,code,ul,ol,li,dl,dt,dd],
     lists:member(Tag, Tags).
