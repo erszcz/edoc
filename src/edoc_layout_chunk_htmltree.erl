@@ -27,7 +27,7 @@ format_xmerl(XMLContents, Options) ->
 
 -spec format_content(edoc_chunks:xml_element_contents(), map()) -> htmltree().
 format_content(Contents, Ctx) ->
-    lists:flatten([ format_content_(C, Ctx) || C <- Contents ]).
+    shell_docs:normalize(lists:flatten([ format_content_(C, Ctx) || C <- Contents ])).
 
 -spec format_content_(edoc_chunks:xml_element_content(), map()) -> htmltree().
 format_content_(#xmlPI{}, _Ctx)      -> [];
@@ -45,7 +45,10 @@ format_content_(#xmlAttribute{} = Attr, _Ctx) ->
 
 format_content_(#xmlText{} = T, Ctx) ->
     Text = T#xmlText.value,
-    iolist_to_binary(Text);
+    case edoc_lib:is_space(Text) of
+	true -> [];
+	false -> [iolist_to_binary(Text)]
+    end;
 
 format_content_(#xmlElement{} = E, Ctx) ->
     #xmlElement{name = Name, content = Content, attributes = Attributes} = E,
