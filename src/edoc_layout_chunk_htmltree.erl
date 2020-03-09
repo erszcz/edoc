@@ -38,7 +38,7 @@ format_content_(#xmlAttribute{} = Attr, _Ctx) ->
     #xmlAttribute{name = Name, value = V} = Attr,
     %% From xmerl.hrl: #xmlAttribute.value :: IOlist() | atom() | integer()
     case V of
-	_ when is_list(V)    -> {Name, iolist_to_binary(V)};
+	_ when is_list(V)    -> {Name, unicode:characters_to_binary(V)};
 	_ when is_atom(V)    -> {Name, atom_to_binary(V, utf8)};
 	_ when is_integer(V) -> {Name, integer_to_binary(V)}
     end;
@@ -47,7 +47,7 @@ format_content_(#xmlText{} = T, Ctx) ->
     Text = T#xmlText.value,
     case edoc_lib:is_space(Text) of
 	true -> [];
-	false -> [iolist_to_binary(Text)]
+	false -> [unicode:characters_to_binary(Text)]
     end;
 
 format_content_(#xmlElement{} = E, Ctx) ->
