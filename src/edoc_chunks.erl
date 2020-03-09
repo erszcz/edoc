@@ -20,7 +20,7 @@
 
 -callback format_xmerl(xml_element_content(), list()) -> any().
 
--include_lib("edoc/include/docs_v1.hrl").
+-include_lib("kernel/include/eep48.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
 
 -type xml_element_contents() :: [ xml_element_content() ].
