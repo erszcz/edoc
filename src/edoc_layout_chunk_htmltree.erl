@@ -27,7 +27,7 @@ format_xmerl(XMLContents, Options) ->
 
 -spec format_content(edoc_chunks:xml_element_contents(), map()) -> htmltree().
 format_content(Contents, Ctx) ->
-    shell_docs:normalize(lists:flatten([ format_content_(C, Ctx) || C <- Contents ])).
+    shell_docs:normalize(format_content_(Contents, Ctx)).
 
 -spec format_content_(edoc_chunks:xml_element_content(), map()) -> htmltree().
 format_content_(#xmlPI{}, _Ctx)      -> [];
@@ -54,13 +54,18 @@ format_content_(#xmlElement{} = E, Ctx) ->
     #xmlElement{name = Name, content = Content, attributes = Attributes} = E,
     case {is_edoc_tag(Name), is_html_tag(Name)} of
 	{true, _} ->
-	    format_content(Content, Ctx);
+	    format_content_(Content, Ctx);
 	{_, false} ->
 	    edoc_report:warning("'~s' is not accepted - skipping tag, extracting content", [Name]),
-	    format_content(Content, Ctx);
+	    format_content_(Content, Ctx);
 	_ ->
-	    [{Name, format_content(Attributes, Ctx), format_content(Content, Ctx)}]
-    end.
+	    [{Name, format_content_(Attributes, Ctx), format_content_(Content, Ctx)}]
+    end;
+format_content_([H|T], Ctx) ->
+    [format_content_(H, Ctx) | format_content_(T, Ctx)];
+format_content_([], _Ctx) ->
+    [].
+
 
 -spec is_edoc_tag(atom()) -> boolean().
 is_edoc_tag(fullDescription) -> true;
