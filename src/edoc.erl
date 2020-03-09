@@ -60,6 +60,13 @@
 	 read_comments/1, read_comments/2,
 	 read_source/1, read_source/2]).
 
+-export_type([edoc_module/0]).
+
+-type edoc_module() :: any().
+%% The EDoc documentation data for a module,
+%% expressed as an XML document in {@link //xmerl. XMerL} format. See
+%% the file <a href="edoc.dtd">`edoc.dtd'</a> for details.
+
 -compile({no_auto_import,[error/1]}).
 
 -include("edoc.hrl").
@@ -731,10 +738,6 @@ get_doc(File) ->
 %% @spec get_doc(File::filename(), Options::proplist()) ->
 %%           {ModuleName, edoc_module()}
 %%	ModuleName = atom()
-%%
-%% @type edoc_module(). The EDoc documentation data for a module,
-%% expressed as an XML document in {@link //xmerl. XMerL} format. See
-%% the file <a href="edoc.dtd">`edoc.dtd'</a> for details.
 %%
 %% @doc Reads a source code file and extracts EDoc documentation data.
 %% Note that without an environment parameter (see {@link get_doc/3}),
