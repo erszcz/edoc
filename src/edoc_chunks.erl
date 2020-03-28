@@ -90,10 +90,13 @@ extract_doc_contents(XPath, Doc, Opts) ->
     end.
 
 edoc_extract_metadata(Doc, Opts) ->
-    case xpath_to_text("./since", Doc, Opts) of
-        <<"">> -> #{};
-        Since -> #{since => Since}
-    end.
+    Since = xpath_to_text("./since", Doc, Opts),
+    Deprecated = xpath_to_text("./deprecated/description/fullDescription", Doc, Opts),
+    maps:from_list([{since, Since} || truthy(Since) ] ++
+		   [{deprecated, Deprecated} || truthy(Deprecated) ]).
+
+truthy(<<>>) -> false;
+truthy(B) when is_binary(B) -> true.
 
 edoc_extract_docs(Doc, Opts) ->
     edoc_extract_types(Doc, Opts) ++ edoc_extract_functions(Doc, Opts).
