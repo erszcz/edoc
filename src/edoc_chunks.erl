@@ -165,7 +165,15 @@ xpath_to_integer(XPath, Doc, Opts) ->
     binary_to_integer(string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts))).
 
 to_plain_text(Term, Opts) ->
-    iolist_to_binary(edoc_layout_chunk_markdown:format_xmerl(Term, Opts)).
+    iolist_to_binary(htmltree_to_text(edoc_layout_chunk_htmltree:format_xmerl(Term, Opts))).
+
+htmltree_to_text([]) -> [];
+htmltree_to_text([Node | Nodes]) ->
+    case Node of
+	_ when is_binary(Node) -> [Node | htmltree_to_text(Nodes)];
+	{_AttrName, Value} -> [Value | htmltree_to_text(Nodes)];
+	{_Tag, _Attrs, SubNodes} -> [htmltree_to_text(SubNodes) | htmltree_to_text(Nodes)]
+    end.
 
 xpath_to_chunk_format(XPath, Doc, Opts) ->
     XMLContents = xmerl_xpath:string(XPath, Doc),
