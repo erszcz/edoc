@@ -104,7 +104,7 @@ source({_M, Name, Path}, Dir, Suffix, Env, OkSet, _Private, _Hidden, ErrorFlag, 
     end.
 
 default_chunk_layout() ->
-    edoc_layout_chunk_htmltree.
+    edoc_layout_chunks.
 
 chunk_file_name(ErlName, Suffix) ->
     string:join([filename:basename(ErlName, ".erl"), Suffix], "").

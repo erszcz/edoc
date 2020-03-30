@@ -1,9 +1,9 @@
-%% @doc A module to extract docs and attach them as chunks.
+%% @doc Convert EDoc module documentation to an EEP-48 `docs_v1' chunk.
 %% @since 0.12
--module(edoc_chunks).
+-module(edoc_layout_chunks).
 
--export([edoc_to_chunk/1, edoc_to_chunk/2,
-         write_chunk/2]).
+-behaviour(edoc_layout).
+-export([module/2]).
 
 -export_type([docs_v1/0,
               docs_v1_entry/0,
@@ -15,23 +15,8 @@
               metadata/0,
               signature/0]).
 
--export_type([xml_element_contents/0,
-              xml_element_content/0]).
-
--callback format_xmerl(xml_element_content(), list()) -> any().
-
 -include_lib("kernel/include/eep48.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
-
--type xml_element_contents() :: [ xml_element_content() ].
--type xml_element_content() :: #xmlElement{}
-                             | #xmlText{}
-                             | #xmlPI{}
-                             | #xmlComment{}
-                             | #xmlDecl{}
-                             | #xmlAttribute{}.
-%% `#xmlElement.content' as defined by `xmerl.hrl'.
-%% It also contains `#xmlAttribute{}', which technically is NOT element content.
 
 %% @type docs_v1(). The Docs v1 chunk according to EEP 48.
 -type docs_v1() :: #docs_v1{anno :: erl_anno:anno(),
@@ -55,22 +40,29 @@
 -type metadata() :: map().
 -type signature() :: [binary()].
 
-%% @doc Fetch edoc docs from a given `ErlPath' and convert it to docs chunk.
+-type xmerl_document() :: [ xmerl_document_node() ].
+-type xmerl_document_node() :: #xmlElement{}
+                             | #xmlText{}
+                             | #xmlPI{}
+                             | #xmlComment{}
+                             | #xmlDecl{}
+                             | #xmlAttribute{}.
+%% `#xmlElement.content' as defined by `xmerl.hrl'.
+%% It also contains `#xmlAttribute{}', which technically is NOT element content.
+
 %%
-%% http://erlang.org/eeps/eep-0048.html
+%%' EDoc layout callbacks
 %%
-%% Examples:
+
+%% @doc Convert EDoc module documentation to an EEP-48 style doc chunk.
+-spec module(edoc:edoc_module(), list()) -> binary().
+module(Doc, Options) ->
+    Chunk = edoc_to_chunk(Doc, Options),
+    term_to_binary(Chunk).
+
+%%.
+%%' Chunk construction
 %%
-%% ```
-%% > docs_chunks:edoc_to_chunk("src/foo.erl").
-%% {docs_v1, ..., erlang, <<"text/markdown">>", ..., ..., ..., ...}
-%% '''
-%% @end
--spec edoc_to_chunk(string()) -> docs_v1().
-edoc_to_chunk(ErlPath) ->
-    Includes = ["include", "src"],
-    {_Module, Doc} = edoc:get_doc(ErlPath, [{preprocess, true}, {includes, Includes}]),
-    edoc_to_chunk(Doc, []).
 
 -spec edoc_to_chunk(_, _) -> docs_v1().
 edoc_to_chunk(Doc, Opts) ->
@@ -86,7 +78,7 @@ extract_doc_contents(XPath, Doc, Opts) ->
 	<<"yes">> ->
 	    hidden;
 	<<"">> ->
-	    xpath_to_chunk_format(XPath, Doc, Opts)
+	    xpath_to_chunk(XPath, Doc)
     end.
 
 edoc_extract_metadata(Doc, Opts) ->
@@ -130,15 +122,8 @@ edoc_extract_function(Doc, Opts) ->
     Metadata = edoc_extract_metadata(Doc, Opts),
     docs_v1_entry(function, Name, Arity, Metadata, DocContents).
 
-%% @doc Append given `Chunk' to `BeamPath'.
-write_chunk(BeamPath, Chunk) ->
-    {ok, _Module, Chunks} = beam_lib:all_chunks(BeamPath),
-    NewChunks = lists:keystore("Docs", 1, Chunks, {"Docs", term_to_binary(Chunk)}),
-    {ok, Binary} = beam_lib:build_module(NewChunks),
-    file:write_file(BeamPath, Binary).
-
-%%
-%% Utilities
+%%.
+%%' Utilities
 %%
 
 docs_v1(DocContents, Metadata, Docs) ->
@@ -165,19 +150,73 @@ xpath_to_integer(XPath, Doc, Opts) ->
     binary_to_integer(string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts))).
 
 to_plain_text(Term, Opts) ->
-    iolist_to_binary(htmltree_to_text(edoc_layout_chunk_htmltree:format_xmerl(Term, Opts))).
+    iolist_to_binary(chunk_to_text(xmerl_to_chunk(Term))).
 
-htmltree_to_text([]) -> [];
-htmltree_to_text([Node | Nodes]) ->
+chunk_to_text([]) -> [];
+chunk_to_text([Node | Nodes]) ->
     case Node of
-	_ when is_binary(Node) -> [Node | htmltree_to_text(Nodes)];
-	{_AttrName, Value} -> [Value | htmltree_to_text(Nodes)];
-	{_Tag, _Attrs, SubNodes} -> [htmltree_to_text(SubNodes) | htmltree_to_text(Nodes)]
+	_ when is_binary(Node) -> [Node | chunk_to_text(Nodes)];
+	{_AttrName, Value} -> [Value | chunk_to_text(Nodes)];
+	{_Tag, _Attrs, SubNodes} -> [chunk_to_text(SubNodes) | chunk_to_text(Nodes)]
     end.
 
-xpath_to_chunk_format(XPath, Doc, Opts) ->
-    XMLContents = xmerl_xpath:string(XPath, Doc),
-    {chunk_format, ChunkFormat} = lists:keyfind(chunk_format, 1, Opts),
-    ChunkFormat:format_xmerl(XMLContents, Opts).
+xpath_to_chunk(XPath, Doc) ->
+    XmerlDoc = xmerl_xpath:string(XPath, Doc),
+    xmerl_to_chunk(XmerlDoc).
+
+%%.
+%%' Xmerl to chunk format
+%%
+
+%% TODO: shell_docs:chunk_elements() is not exported yet.
+-spec xmerl_to_chunk(xmerl_document()) -> shell_docs:chunk_elements().
+xmerl_to_chunk(Contents) ->
+    format_content(Contents).
+
+-spec format_content(xmerl_document()) -> shell_docs:chunk_elements().
+format_content(Contents) ->
+    lists:flatten([ format_content_(C) || C <- Contents ]).
+
+-spec format_content_(xmerl_document_node()) -> shell_docs:chunk_elements().
+format_content_(#xmlPI{})      -> [];
+format_content_(#xmlComment{}) -> [];
+format_content_(#xmlDecl{})    -> [];
+
+format_content_(#xmlAttribute{} = Attr) ->
+    #xmlAttribute{name = Name, value = V} = Attr,
+    %% From xmerl.hrl: #xmlAttribute.value :: IOlist() | atom() | integer()
+    case V of
+	_ when is_list(V)    -> {Name, unicode:characters_to_binary(V)};
+	_ when is_atom(V)    -> {Name, atom_to_binary(V, utf8)};
+	_ when is_integer(V) -> {Name, integer_to_binary(V)}
+    end;
+
+format_content_(#xmlText{} = T) ->
+    Text = T#xmlText.value,
+    case edoc_lib:is_space(Text) of
+	true -> [];
+	false -> [unicode:characters_to_binary(Text)]
+    end;
+
+format_content_(#xmlElement{} = E) ->
+    #xmlElement{name = Name, content = Content, attributes = Attributes} = E,
+    case {is_edoc_tag(Name), is_html_tag(Name)} of
+	{true, _} ->
+	    format_content(Content);
+	{_, false} ->
+	    edoc_report:warning("'~s' is not accepted - skipping tag, extracting content", [Name]),
+	    format_content(Content);
+	_ ->
+	    [{Name, format_content(Attributes), format_content(Content)}]
+    end.
+
+-spec is_edoc_tag(atom()) -> boolean().
+is_edoc_tag(fullDescription) -> true;
+is_edoc_tag(_) -> false.
+
+-spec is_html_tag(atom()) -> boolean().
+is_html_tag(Tag) ->
+    Tags = [a,p,h1,h2,h3,i,br,em,pre,code,ul,ol,li,dl,dt,dd],
+    lists:member(Tag, Tags).
 
 %%. vim: foldmethod=marker foldmarker=%%',%%.

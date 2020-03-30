@@ -51,7 +51,7 @@ test_metadata(Config) ->
 get_doc_chunk(DataDir, PrivDir, Mod) ->
     TagsErl = filename:join([DataDir, atom_to_list(Mod) ++ ".erl"]),
     edoc:files([TagsErl], [{doclet, edoc_doclet_chunks},
-			   {layout, edoc_layout_chunk_htmltree},
+			   {layout, edoc_layout_chunks},
 			   {dir, PrivDir}]),
     TagsChunk = filename:join([PrivDir, "chunks", atom_to_list(Mod) ++ ".chunk"]),
     {ok, BChunk} = file:read_file(TagsChunk),

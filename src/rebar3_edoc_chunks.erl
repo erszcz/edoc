@@ -70,7 +70,7 @@ format_error(Reason) ->
 -spec process_app(rebar_state:t(), rebar_app_info:t()) -> ok.
 process_app(State, App) ->
     EdocOpts = [{doclet, edoc_doclet_chunks},
-		{layout, edoc_layout_chunk_htmltree},
+		{layout, edoc_layout_chunks},
 		{preprocess, true}],
     edoc:application(binary_to_atom(rebar_app_info:name(App), utf8), EdocOpts),
     ok.
