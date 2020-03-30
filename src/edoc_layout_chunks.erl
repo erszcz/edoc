@@ -212,6 +212,7 @@ format_content_(#xmlElement{} = E) ->
 
 -spec is_edoc_tag(atom()) -> boolean().
 is_edoc_tag(fullDescription) -> true;
+is_edoc_tag(since) -> true;
 is_edoc_tag(_) -> false.
 
 -spec is_html_tag(atom()) -> boolean().
