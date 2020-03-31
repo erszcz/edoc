@@ -23,18 +23,28 @@ parse_args(Args) ->
 
 parse_args([], Opts) ->
     Opts;
+parse_args(["-" ++ _ = Arg | Args], #{continue := Cont} = Opts) when Cont /= false ->
+    parse_args([Arg | Args], Opts#{continue := false});
+
 parse_args(["-chunks" | Args], Opts) ->
-    parse_args(Args, Opts#{mode := chunks, continue := false});
+    parse_args(Args, Opts#{mode := chunks});
+
 parse_args(["-pa", Path | Args], Opts) ->
     #{code_paths := Paths} = Opts,
-    parse_args(Args, Opts#{code_paths := Paths ++ [Path], continue := false});
+    parse_args(Args, Opts#{code_paths := Paths ++ [Path]});
+
 parse_args(["-app", App | Args], Opts) ->
-    parse_args(Args, Opts#{run := app, app := list_to_atom(App), continue := false});
+    parse_args(Args, Opts#{run := app, app := list_to_atom(App)});
+
 parse_args(["-files" | Args], Opts) ->
     parse_args(Args, Opts#{run := files, continue := files});
 parse_args([File | Args], #{continue := files} = Opts) ->
     #{files := Files} = Opts,
-    parse_args(Args, Opts#{files := Files ++ [File]}).
+    parse_args(Args, Opts#{files := Files ++ [File]});
+
+parse_args([Unknown | Args], Opts) ->
+    print("Unknown option: ~ts\n", [Unknown]),
+    parse_args(Args, Opts).
 
 check_opts(Opts) ->
     case Opts of
