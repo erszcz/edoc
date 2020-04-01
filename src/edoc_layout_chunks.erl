@@ -217,6 +217,8 @@ is_edoc_tag(_) -> false.
 
 -spec is_html_tag(atom()) -> boolean().
 is_html_tag(Tag) ->
+    %% This is only a subset of existing HTML tags.
+    %% Compare with https://developer.mozilla.org/en-US/docs/Web/HTML/Element
     Tags = [a,p,h1,h2,h3,i,br,em,pre,code,ul,ol,li,dl,dt,dd],
     lists:member(Tag, Tags).
 
