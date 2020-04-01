@@ -18,13 +18,13 @@
 -include_lib("kernel/include/eep48.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
 
-%% @type docs_v1(). The Docs v1 chunk according to EEP 48.
 -type docs_v1() :: #docs_v1{anno :: erl_anno:anno(),
                             beam_language :: beam_language(),
                             format :: mime_type(),
                             module_doc :: doc(),
                             metadata :: metadata(),
                             docs :: [docs_v1_entry()]}.
+%% The Docs v1 chunk according to EEP 48.
 
 -type docs_v1_entry() :: #docs_v1_entry{kind_name_arity :: {atom(), atom(), arity()},
                                         anno :: erl_anno:anno(),
@@ -55,7 +55,7 @@
 %%
 
 %% @doc Convert EDoc module documentation to an EEP-48 style doc chunk.
--spec module(edoc:edoc_module(), list()) -> binary().
+-spec module(edoc:xmerl_module(), list()) -> binary().
 module(Doc, Options) ->
     Chunk = edoc_to_chunk(Doc, Options),
     term_to_binary(Chunk).
