@@ -141,7 +141,7 @@ docs_v1_entry(Kind, Name, Arity, Metadata, DocContents) ->
     {{Kind, Name, Arity}, Anno, Signature, #{<<"en">> => DocContents}, Metadata}.
 
 xpath_to_text(XPath, Doc, Opts) ->
-    string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts)).
+    to_plain_text(xmerl_xpath:string(XPath, Doc), Opts).
 
 xpath_to_atom(XPath, Doc, Opts) ->
     binary_to_atom(string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts)), utf8).
@@ -150,7 +150,9 @@ xpath_to_integer(XPath, Doc, Opts) ->
     binary_to_integer(string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts))).
 
 to_plain_text(Term, Opts) ->
-    iolist_to_binary(chunk_to_text(xmerl_to_chunk(Term))).
+    iolist_to_binary(
+      shell_docs:normalize(
+	chunk_to_text(xmerl_to_chunk(Term)))).
 
 chunk_to_text([]) -> [];
 chunk_to_text([Node | Nodes]) ->
