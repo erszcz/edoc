@@ -45,10 +45,10 @@
                              | #xmlText{}
                              | #xmlPI{}
                              | #xmlComment{}
-                             | #xmlDecl{}
-                             | #xmlAttribute{}.
+                             | #xmlDecl{}.
 %% `#xmlElement.content' as defined by `xmerl.hrl'.
-%% It also contains `#xmlAttribute{}', which technically is NOT element content.
+
+-type xmerl_attribute() :: #xmlAttribute{}.
 
 -type xpath() :: string().
 
@@ -80,7 +80,7 @@ edoc_to_chunk(Doc, Opts) ->
       Doc :: edoc:xmerl_module(),
       Opts :: proplists:proplist().
 extract_doc_contents(XPath, Doc, Opts) ->
-    case string:trim(xpath_to_text("./@private", Doc, Opts)) of
+    case xpath_to_text("./@private", Doc, Opts) of
 	<<"yes">> ->
 	    hidden;
 	<<"">> ->
@@ -90,11 +90,11 @@ extract_doc_contents(XPath, Doc, Opts) ->
 edoc_extract_metadata(Doc, Opts) ->
     Since = xpath_to_text("./since", Doc, Opts),
     Deprecated = xpath_to_text("./deprecated/description/fullDescription", Doc, Opts),
-    maps:from_list([{since, Since} || truthy(Since) ] ++
-		   [{deprecated, Deprecated} || truthy(Deprecated) ]).
+    maps:from_list([{since, Since} || is_truthy(Since)] ++
+		   [{deprecated, Deprecated} || is_truthy(Deprecated)]).
 
-truthy(<<>>) -> false;
-truthy(B) when is_binary(B) -> true.
+is_truthy(<<>>) -> false;
+is_truthy(B) when is_binary(B) -> true.
 
 edoc_extract_docs(Doc, Opts) ->
     edoc_extract_types(Doc, Opts) ++ edoc_extract_functions(Doc, Opts).
@@ -151,25 +151,31 @@ docs_v1_entry(Kind, Name, Arity, Metadata, DocContents) ->
     Signature = [list_to_binary(atom_to_list(Name) ++ "/" ++ integer_to_list(Arity))],
     {{Kind, Name, Arity}, Anno, Signature, DocContents, Metadata}.
 
+-spec xpath_to_text(_, _, _) -> binary().
 xpath_to_text(XPath, Doc, Opts) ->
-    to_plain_text(xmerl_xpath:string(XPath, Doc), Opts).
-
-xpath_to_atom(XPath, Doc, Opts) ->
-    binary_to_atom(string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts)), utf8).
-
-xpath_to_integer(XPath, Doc, Opts) ->
-    binary_to_integer(string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts))).
-
-to_plain_text(Term, Opts) ->
-    iolist_to_binary(shell_docs:normalize(chunk_to_text(xmerl_to_chunk(Term)))).
+    case xmerl_xpath:string(XPath, Doc) of
+	[] -> <<>>;
+	[#xmlAttribute{} = Attr] ->
+	    {_ , Value} = format_attribute(Attr),
+	    hd(shell_docs:normalize([Value]));
+	[#xmlElement{}] = Elements ->
+	    iolist_to_binary(chunk_to_text(xmerl_to_chunk(Elements)));
+	[_|_] ->
+	    erlang:error(multiple_nodes, [XPath, Doc, Opts])
+    end.
 
 chunk_to_text([]) -> [];
 chunk_to_text([Node | Nodes]) ->
     case Node of
 	_ when is_binary(Node) -> [Node | chunk_to_text(Nodes)];
-	{_AttrName, Value} -> [Value | chunk_to_text(Nodes)];
 	{_Tag, _Attrs, SubNodes} -> [chunk_to_text(SubNodes) | chunk_to_text(Nodes)]
     end.
+
+xpath_to_atom(XPath, Doc, Opts) ->
+    binary_to_atom(xpath_to_text(XPath, Doc, Opts), utf8).
+
+xpath_to_integer(XPath, Doc, Opts) ->
+    binary_to_integer(xpath_to_text(XPath, Doc, Opts)).
 
 xpath_to_chunk(XPath, Doc) ->
     XmerlDoc = xmerl_xpath:string(XPath, Doc),
@@ -182,7 +188,7 @@ xpath_to_chunk(XPath, Doc) ->
 %% TODO: shell_docs:chunk_elements() is not exported yet.
 -spec xmerl_to_chunk(xmerl_document()) -> shell_docs:chunk_elements().
 xmerl_to_chunk(Contents) ->
-    format_content(Contents).
+    shell_docs:normalize(format_content(Contents)).
 
 -spec format_content(xmerl_document()) -> shell_docs:chunk_elements().
 format_content(Contents) ->
@@ -192,15 +198,6 @@ format_content(Contents) ->
 format_content_(#xmlPI{})      -> [];
 format_content_(#xmlComment{}) -> [];
 format_content_(#xmlDecl{})    -> [];
-
-format_content_(#xmlAttribute{} = Attr) ->
-    #xmlAttribute{name = Name, value = V} = Attr,
-    %% From xmerl.hrl: #xmlAttribute.value :: IOlist() | atom() | integer()
-    case V of
-	_ when is_list(V)    -> {Name, unicode:characters_to_binary(V)};
-	_ when is_atom(V)    -> {Name, atom_to_binary(V, utf8)};
-	_ when is_integer(V) -> {Name, integer_to_binary(V)}
-    end;
 
 format_content_(#xmlText{} = T) ->
     Text = T#xmlText.value,
@@ -218,7 +215,21 @@ format_content_(#xmlElement{} = E) ->
 	    edoc_report:warning("'~s' is not accepted - skipping tag, extracting content", [Name]),
 	    format_content(Content);
 	_ ->
-	    [{Name, format_content(Attributes), format_content(Content)}]
+	    [{Name, format_attributes(Attributes), format_content(Content)}]
+    end.
+
+-spec format_attributes([xmerl_attribute()]) -> [shell_docs:chunk_element_attr()].
+format_attributes(Attrs) ->
+    [ format_attribute(Attr) || Attr <- Attrs ].
+
+-spec format_attribute(xmerl_attribute()) -> shell_docs:chunk_element_attr().
+format_attribute(#xmlAttribute{} = Attr) ->
+    #xmlAttribute{name = Name, value = V} = Attr,
+    %% From xmerl.hrl: #xmlAttribute.value :: IOlist() | atom() | integer()
+    case V of
+	_ when is_list(V)    -> {Name, unicode:characters_to_binary(V)};
+	_ when is_atom(V)    -> {Name, atom_to_binary(V, utf8)};
+	_ when is_integer(V) -> {Name, integer_to_binary(V)}
     end.
 
 -spec is_edoc_tag(atom()) -> boolean().
