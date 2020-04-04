@@ -50,12 +50,14 @@
 %% `#xmlElement.content' as defined by `xmerl.hrl'.
 %% It also contains `#xmlAttribute{}', which technically is NOT element content.
 
+-type xpath() :: string().
+
 %%
 %%' EDoc layout callbacks
 %%
 
 %% @doc Convert EDoc module documentation to an EEP-48 style doc chunk.
--spec module(edoc:xmerl_module(), list()) -> binary().
+-spec module(edoc:xmerl_module(), proplists:proplist()) -> binary().
 module(Doc, Options) ->
     Chunk = edoc_to_chunk(Doc, Options),
     term_to_binary(Chunk).
@@ -64,7 +66,7 @@ module(Doc, Options) ->
 %%' Chunk construction
 %%
 
--spec edoc_to_chunk(_, _) -> docs_v1().
+-spec edoc_to_chunk(edoc:xmerl_module(), proplists:proplist()) -> docs_v1().
 edoc_to_chunk(Doc, Opts) ->
     [Doc] = xmerl_xpath:string("//module", Doc),
     Metadata = edoc_extract_metadata(Doc, Opts),
@@ -73,12 +75,16 @@ edoc_to_chunk(Doc, Opts) ->
     Chunk = docs_v1(DocContents, Metadata, Docs),
     Chunk.
 
+-spec extract_doc_contents(XPath, Doc, Opts) -> doc() when
+      XPath :: xpath(),
+      Doc :: edoc:xmerl_module(),
+      Opts :: proplists:proplist().
 extract_doc_contents(XPath, Doc, Opts) ->
     case string:trim(xpath_to_text("./@private", Doc, Opts)) of
 	<<"yes">> ->
 	    hidden;
 	<<"">> ->
-	    xpath_to_chunk(XPath, Doc)
+	    doc_content(xpath_to_chunk(XPath, Doc), Opts)
     end.
 
 edoc_extract_metadata(Doc, Opts) ->
@@ -110,35 +116,40 @@ edoc_extract_function(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
     DocContents =
-        case xmerl_xpath:string("./equiv", Doc) of
-            [Equiv] ->
-                %% TODO: use new link syntax here
-                Expr = xpath_to_text("./expr", Equiv, Opts),
-                See = xpath_to_text("./see", Equiv, Opts),
-                [iolist_to_binary(["Equivalent to ", "[", Expr, "](`", See, "`)."])];
-            [] ->
-                extract_doc_contents("./description/fullDescription", Doc, Opts)
-        end,
+	case xmerl_xpath:string("./equiv", Doc) of
+	    [Equiv] ->
+		%% TODO: use new link syntax here
+		Expr = xpath_to_text("./expr", Equiv, Opts),
+		See = xpath_to_text("./see", Equiv, Opts),
+		Content = [iolist_to_binary(["Equivalent to ", "[", Expr, "](`", See, "`)."])],
+		doc_content(Content, Opts);
+	    [] ->
+		extract_doc_contents("./description/fullDescription", Doc, Opts)
+	end,
     Metadata = edoc_extract_metadata(Doc, Opts),
     docs_v1_entry(function, Name, Arity, Metadata, DocContents).
 
-%%.
-%%' Utilities
-%%
+-spec doc_content(_, _) -> doc().
+doc_content([], _Opts) -> none;
+doc_content(Content, Opts) ->
+    DocLanguage = proplists:get_value(lang, Opts, <<"en">>),
+    #{DocLanguage => Content}.
 
 docs_v1(DocContents, Metadata, Docs) ->
-    % TODO fill these in
+    % TODO annotation
     Anno = 0,
-    BeamLanguage = erlang,
-    Format = <<"application/erlang+html">>,
-    {docs_v1, Anno, BeamLanguage, Format, #{<<"en">> => DocContents}, Metadata, Docs}.
+    #docs_v1{anno = Anno,
+             module_doc = DocContents,
+             metadata = Metadata,
+             docs = Docs}.
 
+-spec docs_v1_entry(_, _, _, _, _) -> docs_v1_entry().
 docs_v1_entry(Kind, Name, Arity, Metadata, DocContents) ->
-    % TODO fill these in
+    % TODO annotation
     Anno = 0,
     % TODO get signature from abstract code
     Signature = [list_to_binary(atom_to_list(Name) ++ "/" ++ integer_to_list(Arity))],
-    {{Kind, Name, Arity}, Anno, Signature, #{<<"en">> => DocContents}, Metadata}.
+    {{Kind, Name, Arity}, Anno, Signature, DocContents, Metadata}.
 
 xpath_to_text(XPath, Doc, Opts) ->
     to_plain_text(xmerl_xpath:string(XPath, Doc), Opts).
@@ -150,9 +161,7 @@ xpath_to_integer(XPath, Doc, Opts) ->
     binary_to_integer(string:trim(to_plain_text(xmerl_xpath:string(XPath, Doc), Opts))).
 
 to_plain_text(Term, Opts) ->
-    iolist_to_binary(
-      shell_docs:normalize(
-	chunk_to_text(xmerl_to_chunk(Term)))).
+    iolist_to_binary(shell_docs:normalize(chunk_to_text(xmerl_to_chunk(Term)))).
 
 chunk_to_text([]) -> [];
 chunk_to_text([Node | Nodes]) ->

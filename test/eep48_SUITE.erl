@@ -88,7 +88,7 @@ lookup_function(Function, Arity, Docs) ->
 			(_) ->
 			     false
 		     end, Docs),
-    [{F, A, S, maps:get(<<"en">>, D), M} || {F,A,S,D,M} <- FnFunctions].
+    [{F, A, S, D, M} || {F,A,S,D,M} <- FnFunctions].
 
 get_metadata({_, _, _, _, Metadata}) -> Metadata.
 
