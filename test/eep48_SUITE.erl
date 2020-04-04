@@ -7,10 +7,12 @@
 %% Test server callbacks
 -export([suite/0, all/0, groups/0,
 	 init_per_suite/1, end_per_suite/1,
-	 init_per_group/2, end_per_group/2]).
+	 init_per_group/2, end_per_group/2,
+	 init_per_testcase/2, end_per_testcase/2]).
 
 %% Test cases
--export([test_metadata/1]).
+-export([run_on_self/1,
+	 test_metadata/1]).
 
 %%
 %% CT preamble
@@ -18,7 +20,8 @@
 
 suite() -> [].
 
-all() -> [test_metadata].
+all() -> [run_on_self,
+	  test_metadata].
 
 groups() -> [].
 
@@ -28,9 +31,28 @@ end_per_suite(_Config) -> ok.
 init_per_group(_GroupName, Config) -> Config.
 end_per_group(_GroupName, _Config) -> ok.
 
+init_per_testcase(run_on_self = _CaseName, Config) ->
+    {ok, #{ebin := EbinDir} = CopyInfo} = copy_application(edoc, ?config(priv_dir, Config)),
+    true = code:add_patha(EbinDir),
+    [{edoc_copy, CopyInfo} | Config];
+init_per_testcase(_CaseName, Config) -> Config.
+
+end_per_testcase(run_on_self = _CaseName, Config) ->
+    #{ebin := EbinDir} = ?config(edoc_copy, Config),
+    true = code:del_path(EbinDir),
+    Config;
+end_per_testcase(_CaseName, Config) -> Config.
+
 %%
 %% Tests
 %%
+
+run_on_self(Config) ->
+    ok = edoc:application(edoc, [{doclet, edoc_doclet_chunks},
+				 {layout, edoc_layout_chunks}]),
+    ok = application:load(edoc),
+    {ok, Modules} = application:get_key(edoc, modules),
+    [ shell_docs:validate(M) || M <- Modules ].
 
 test_metadata(Config) ->
     %% GIVEN
@@ -69,3 +91,32 @@ lookup_function(Function, Arity, Docs) ->
     [{F, A, S, maps:get(<<"en">>, D), M} || {F,A,S,D,M} <- FnFunctions].
 
 get_metadata({_, _, _, _, Metadata}) -> Metadata.
+
+copy_application(App, undefined) ->
+    ct:fail("~s: target dir undefined", [?FUNCTION_NAME]);
+copy_application(App, TargetDir) ->
+    ok = file:make_dir(filename:join([TargetDir, App])),
+    DocDir = filename:join([TargetDir, App, "doc"]),
+    ok = file:make_dir(DocDir),
+    EbinDir = filename:join([TargetDir, App, "ebin"]),
+    ok = file:make_dir(EbinDir),
+    IncludeDir = filename:join([TargetDir, App, "include"]),
+    ok = file:make_dir(IncludeDir),
+    SrcDir = filename:join([TargetDir, App, "src"]),
+    ok = file:make_dir(SrcDir),
+    {ok, EbinFiles} = file:list_dir(code:lib_dir(App, ebin)),
+    lists:foreach(fun (F) ->
+			  file:copy(filename:join(code:lib_dir(App, ebin), F),
+				    filename:join(EbinDir, F))
+		  end, EbinFiles),
+    {ok, IncludeFiles} = file:list_dir(code:lib_dir(App, include)),
+    lists:foreach(fun (F) ->
+			  file:copy(filename:join(code:lib_dir(App, include), F),
+				    filename:join(IncludeDir, F))
+		  end, IncludeFiles),
+    {ok, SrcFiles} = file:list_dir(code:lib_dir(App, src)),
+    lists:foreach(fun (F) ->
+			  file:copy(filename:join(code:lib_dir(App, src), F),
+				    filename:join(SrcDir, F))
+		  end, SrcFiles),
+    {ok, #{ebin => EbinDir, doc => DocDir, src => SrcDir}}.
