@@ -2,6 +2,8 @@
 -module(edoc_cli).
 -export([main/1]).
 
+%% TODO: accept `private'/`hidden' and forward accordingly
+
 main(Args) ->
     Opts = parse_args(Args),
     print("Running with opts:\n~p\n", [Opts]),

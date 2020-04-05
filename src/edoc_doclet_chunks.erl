@@ -91,6 +91,7 @@ sources(Sources, Dir, Modules, Env, Options) ->
 source({_M, Name, Path}, Dir, Suffix, Env, OkSet, _Private, _Hidden, ErrorFlag, Options) ->
     File = filename:join(Path, Name),
     try
+	%% TODO: should we ever want not to have these entries in the chunk?
 	{_Module, Doc} = edoc:get_doc(File, Env, [private, hidden | Options]),
 	%% TODO: edoc_doclet_default does check_name, check for private, and check for hidden here
 	Chunk = edoc:layout(Doc, Options),
