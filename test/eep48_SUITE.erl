@@ -11,7 +11,7 @@
 	 init_per_testcase/2, end_per_testcase/2]).
 
 %% Test cases
--export([run_on_self/1,
+-export([edoc_app_should_pass_shell_docs_validation/1,
 	 test_metadata/1]).
 
 %%
@@ -20,7 +20,7 @@
 
 suite() -> [].
 
-all() -> [run_on_self,
+all() -> [edoc_app_should_pass_shell_docs_validation,
 	  test_metadata].
 
 groups() -> [].
@@ -31,13 +31,13 @@ end_per_suite(_Config) -> ok.
 init_per_group(_GroupName, Config) -> Config.
 end_per_group(_GroupName, _Config) -> ok.
 
-init_per_testcase(run_on_self = _CaseName, Config) ->
+init_per_testcase(edoc_app_should_pass_shell_docs_validation = _CaseName, Config) ->
     {ok, #{ebin := EbinDir} = CopyInfo} = copy_application(edoc, ?config(priv_dir, Config)),
     true = code:add_patha(EbinDir),
     [{edoc_copy, CopyInfo} | Config];
 init_per_testcase(_CaseName, Config) -> Config.
 
-end_per_testcase(run_on_self = _CaseName, Config) ->
+end_per_testcase(edoc_app_should_pass_shell_docs_validation = _CaseName, Config) ->
     #{ebin := EbinDir} = ?config(edoc_copy, Config),
     true = code:del_path(EbinDir),
     Config;
@@ -47,7 +47,7 @@ end_per_testcase(_CaseName, Config) -> Config.
 %% Tests
 %%
 
-run_on_self(Config) ->
+edoc_app_should_pass_shell_docs_validation(Config) ->
     ok = edoc:application(edoc, [{doclet, edoc_doclet_chunks},
 				 {layout, edoc_layout_chunks}]),
     ok = application:load(edoc),
