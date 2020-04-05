@@ -222,6 +222,8 @@ callback({N, A}, _Env, _Opts) ->
 %%   name CDATA #REQUIRED
 %%   arity CDATA #REQUIRED
 %%   exported NMTOKEN(yes | no) #REQUIRED
+%%   private NMTOKEN(yes | no) #IMPLIED
+%%   hidden NMTOKEN(yes | no) #IMPLIED
 %%   label CDATA #IMPLIED>
 %% <!ELEMENT args (arg*)>
 %% <!ELEMENT arg (argName, description?)>
@@ -235,10 +237,9 @@ function({N, A}, As, Export, Ts, Env, Opts) ->
     {Args, Ret, Spec} = signature(Ts, As, Env),
     {function, [{name, atom_to_list(N)},
 		{arity, integer_to_list(A)},
-      		{exported, case Export of
-			       true -> "yes";
-			       false -> "no"
-			   end},
+		{exported, yes_or_no(Export)},
+		{private, yes_or_no(is_private(Ts))},
+		{hidden, yes_or_no(is_hidden(Ts))},
 		{label, edoc_refs:to_label(edoc_refs:function(N, A))}],
      [{args, [{arg, [{argName, [atom_to_list(A)]}] ++ description(D)}
 	      || {A, D} <- Args]}]
@@ -255,6 +256,9 @@ function({N, A}, As, Export, Ts, Env, Opts) ->
      ++ sees(Ts, Env)
      ++ todos(Ts, Opts)
     }.
+
+yes_or_no(true) -> "yes";
+yes_or_no(false) -> "no".
 
 get_throws(Ts, Env) ->
     case get_tags(throws, Ts) of

@@ -80,17 +80,23 @@ edoc_to_chunk(Doc, Opts) ->
       Doc :: edoc:xmerl_module(),
       Opts :: proplists:proplist().
 extract_doc_contents(XPath, Doc, Opts) ->
-    %% TODO: detect @private and @hidden
-    case xpath_to_text("./@private", Doc, Opts) of
-	<<"yes">> ->
+    case {xpath_to_text("./@private", Doc, Opts),
+	  xpath_to_text("./@hidden", Doc, Opts)}
+    of
+	{<<"yes">>, _} ->
+	    %% EDoc `@private' is EEP-48 `hidden'
 	    hidden;
-	<<"">> ->
+	{_, <<"yes">>} ->
+	    %% EDoc `@hidden' is EEP-48 `none'
+	    none;
+	_ ->
 	    doc_content(xpath_to_chunk(XPath, Doc), Opts)
     end.
 
 edoc_extract_metadata(Doc, Opts) ->
     Since = xpath_to_text("./since", Doc, Opts),
     Deprecated = xpath_to_text("./deprecated/description/fullDescription", Doc, Opts),
+    %% TODO: should @private and @hidden be stored in metadata?
     %% TODO: add EDoc version to metadata
     maps:from_list([{since, Since} || is_truthy(Since)] ++
 		   [{deprecated, Deprecated} || is_truthy(Deprecated)]).
