@@ -289,7 +289,7 @@ text(Text, Context, Env, Opts, Where) ->
 %% represented by the list of forms. Exports are guaranteed to exist in
 %% the set of defined names.
 
--spec get_module_info(Forms, File) -> edoc:module() when
+-spec get_module_info(Forms, File) -> edoc:module_meta() when
       Forms :: [erl_syntax:syntaxTree()],
       File :: filename().
 get_module_info(Forms, File) ->

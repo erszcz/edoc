@@ -60,7 +60,7 @@
 	 read_comments/1, read_comments/2,
 	 read_source/1, read_source/2]).
 
--export_type([module/0,
+-export_type([module_meta/0,
 	      env/0,
 	      comment/0,
 	      entry/0,
@@ -69,13 +69,13 @@
 
 -include("edoc.hrl").
 
--type module_t() :: #module{name :: [] | atom(),
-			    parameters :: none | [atom()],
-			    functions :: ordset(function_name()),
-			    exports :: ordset(function_name()),
-			    attributes :: ordset({atom(), term()}),
-			    records :: [{atom(), [{atom(), term()}]}],
-			    encoding :: epp:source_encoding()}.
+-type module_meta() :: #module{name :: [] | atom(),
+			       parameters :: none | [atom()],
+			       functions :: ordset(function_name()),
+			       exports :: ordset(function_name()),
+			       attributes :: ordset({atom(), term()}),
+			       records :: [{atom(), [{atom(), term()}]}],
+			       encoding :: epp:source_encoding()}.
 %% Module information.
 
 -type env() :: #env{}.

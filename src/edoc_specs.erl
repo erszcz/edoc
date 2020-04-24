@@ -97,15 +97,15 @@ dummy_spec(Form) ->
 docs(Forms, CommentFun) ->
     find_type_docs(Forms, [], CommentFun).
 
--type entry() :: #entry{}.
--type module_info() :: #module{}.
--type entries() :: [entry()].
--spec add_data(Entries::entries(), Options::proplists:proplist(),
-               File::file:filename(), Module::module_info()) -> entries().
-
 %% @doc Create tags a la EDoc for Erlang specifications and types.
 %% Exported types and types used (indirectly) by Erlang specs are
 %% added to the entries.
+
+-spec add_data(Entries, Opts, File, Module) -> [edoc:entry()] when
+      Entries :: [edoc:entry()],
+      Opts :: proplists:proplist(),
+      File :: file:filename(),
+      Module :: edoc:module_meta().
 add_data(Entries, Opts, File, Module) ->
     TypeDefs0 = espec_types(Entries),
     TypeTable = ets:new(etypes, [ordered_set]),
