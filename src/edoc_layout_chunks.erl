@@ -40,7 +40,6 @@
 -type metadata() :: map().
 -type signature() :: [binary()].
 
--type xmerl_document() :: [ xmerl_document_node() ].
 -type xmerl_document_node() :: #xmlElement{}
                              | #xmlText{}
                              | #xmlPI{}
@@ -194,11 +193,11 @@ xpath_to_chunk(XPath, Doc) ->
 %%
 
 %% TODO: shell_docs:chunk_elements() is not exported yet.
--spec xmerl_to_chunk(xmerl_document()) -> shell_docs:chunk_elements().
+-spec xmerl_to_chunk(edoc:xmerl_module()) -> shell_docs:chunk_elements().
 xmerl_to_chunk(Contents) ->
     shell_docs:normalize(format_content(Contents)).
 
--spec format_content(xmerl_document()) -> shell_docs:chunk_elements().
+-spec format_content(edoc:xmerl_module()) -> shell_docs:chunk_elements().
 format_content(Contents) ->
     lists:flatten([ format_content_(C) || C <- Contents ]).
 
