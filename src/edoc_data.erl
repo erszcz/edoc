@@ -46,6 +46,7 @@
 %%                   functions)>
 %% <!ATTLIST module
 %%   name CDATA #REQUIRED
+%%   line CDATA #REQUIRED
 %%   private NMTOKEN(yes | no) #IMPLIED
 %%   hidden NMTOKEN(yes | no) #IMPLIED
 %%   root CDATA #IMPLIED>
@@ -94,7 +95,8 @@ module(Module, Entries, Env, Opts) ->
     Functions = function_filter(Entries, Opts),
     Out = {module, ([{name, Name},
 		     {root, Env#env.root},
-                     {encoding, Module#module.encoding}]
+                     {encoding, Module#module.encoding},
+		     {line, HeaderEntry#entry.line}]
 		    ++ case is_private(HeaderTags) of
 			   true -> [{private, "yes"}];
 			   false -> []

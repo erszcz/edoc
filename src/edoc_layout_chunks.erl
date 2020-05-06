@@ -68,11 +68,11 @@ module(Doc, Options) ->
 -spec edoc_to_chunk(edoc:xmerl_module(), proplists:proplist()) -> docs_v1().
 edoc_to_chunk(Doc, Opts) ->
     [Doc] = xmerl_xpath:string("//module", Doc),
-    Metadata = edoc_extract_metadata(Doc, Opts),
+    Anno = module_anno(Doc, Opts),
     DocContents = extract_doc_contents("./description/fullDescription", Doc, Opts),
+    Metadata = edoc_extract_metadata(Doc, Opts),
     Docs = edoc_extract_docs(Doc, Opts),
-    Chunk = docs_v1(DocContents, Metadata, Docs),
-    Chunk.
+    docs_v1(Anno, DocContents, Metadata, Docs).
 
 -spec extract_doc_contents(XPath, Doc, Opts) -> doc() when
       XPath :: xpath(),
@@ -142,13 +142,16 @@ doc_content(Content, Opts) ->
     DocLanguage = proplists:get_value(lang, Opts, <<"en">>),
     #{DocLanguage => Content}.
 
-docs_v1(DocContents, Metadata, Docs) ->
-    % TODO annotation
-    Anno = 0,
+docs_v1(Anno, ModuleDoc, Metadata, Docs) ->
     #docs_v1{anno = Anno,
-             module_doc = DocContents,
+             module_doc = ModuleDoc,
              metadata = Metadata,
              docs = Docs}.
+
+module_anno(Doc, Opts) ->
+    {source, File} = lists:keyfind(source, 1, Opts),
+    Line = xpath_to_integer("./@line", Doc, Opts),
+    erl_anno:set_file(File, erl_anno:new(Line)).
 
 -spec docs_v1_entry(_, _, _, _, _) -> docs_v1_entry().
 docs_v1_entry(Kind, Name, Arity, Metadata, DocContents) ->
