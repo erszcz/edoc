@@ -104,7 +104,7 @@
 %% expressed as an XML document in {@link //xmerl. XMerL} format. See
 %% the file <a href="edoc.dtd">`edoc.dtd'</a> for details.
 
--type ordset(T) :: sets:ordset(T).
+-type ordset(T) :: ordsets:ordset(T).
 -type function_name() :: {atom(), integer()}.
 -type filename() :: file:filename().
 -type proplist() :: proplists:proplist().
