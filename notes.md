@@ -524,3 +524,10 @@ This probably could be enabled by extending the `#entry{}` record with
 
 %% TODO: @private and @hidden info could be forwarded on the xmerl level
 in `edoc_data:function/6`.
+
+# 2020-05-07
+
+ToDo:
+
+- [x] function signature: Name/Arity
+- [ ] type signature: -spec Type() :: Def.

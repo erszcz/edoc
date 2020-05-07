@@ -30,9 +30,11 @@ edoc:files(["src/edoc.erl"], [{doclet, edoc_doclet_chunks}, {dir, "doctest"}, {l
 Chunk = binary_to_term(BChunk).
 
 f().
-edoc:files(["src/edoc.erl"], [{doclet, edoc_doclet_chunks}, {dir, "doctest"},
-			      {layout, edoc_layout_chunk_htmltree}]).
-{ok, BChunk} = file:read_file("doctest/chunks/edoc.chunk").
+edoc:files(["src/edoc.erl"],
+           [{doclet, edoc_doclet_chunks},
+            {dir, "/tmp/doctest"},
+            {layout, edoc_layout_chunks}]).
+{ok, BChunk} = file:read_file("/tmp/doctest/chunks/edoc.chunk").
 Chunk = binary_to_term(BChunk).
 
 f(ReadChunk).
@@ -68,10 +70,17 @@ edoc:application(recon, [{doclet, edoc_doclet_chunks},
                                      "/Users/erszcz/.asdf/installs/erlang/21.1/lib/stdlib-3.6/include/"]},
                          {dir, "doctest/recon-markdown-chunks"}]).
 
+f().
 dbg:stop_clear().
-dbg:tracer().
+rr(edoc_data).
+TraceF = fun (Trace, _) ->
+                 rp([calendar:now_to_local_time(os:timestamp()), Trace])
+         end.
+dbg:tracer(process, {TraceF, ok}).
 dbg:p(all, call).
-dbg:tpl(edoc_layout_chunks, edoc_to_chunk, x).
+dbg:tpl(edoc_data, function, x).
+
+%dbg:tpl(edoc_layout_chunks, edoc_to_chunk, x).
 %dbg:tpl(edoc_extract, collect, x).
 %dbg:tpl(edoc_layout_chunks, edoc_extract_function, x).
 %dbg:tpl(edoc, run, x).
