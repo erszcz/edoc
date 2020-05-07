@@ -104,7 +104,7 @@ is_truthy(<<>>) -> false;
 is_truthy(B) when is_binary(B) -> true.
 
 doc_entries(Doc, Opts) ->
-    types(Doc, Opts) ++ functions(Doc, Opts).
+    types(Doc, Opts) ++ callbacks(Doc, Opts) ++ functions(Doc, Opts).
 
 types(Doc, Opts) ->
     [type(TD, Opts) || TD <- xmerl_xpath:string("//typedecls/typedecl", Doc)].
@@ -116,6 +116,19 @@ type(Doc, Opts) ->
     Anno = anno(Doc, Opts),
     EntryDoc = doc_contents("./description/fullDescription", Doc, Opts),
     docs_v1_entry(type, Name, Arity, Anno, EntryDoc, #{}).
+
+callbacks(Doc, Opts) ->
+    [callback(C, Opts) || C <- xmerl_xpath:string("//module/callbacks/callback", Doc)].
+
+callback(Doc, Opts) ->
+    Name = xpath_to_atom("./@name", Doc, Opts),
+    Arity = xpath_to_integer("./@arity", Doc, Opts),
+    %% TODO: callback annotations - edoc_data does not get this info from source, but from
+    %% running `M:behaviour_info/1', so there's more work needed to get `-callback' line info.
+    %% `edoc_specs' seems like the place to extract this info and pass on as an Edoc `#tag{}'.
+    Anno = erl_anno:new(0),
+    EntryDoc = none,
+    docs_v1_entry(callback, Name, Arity, Anno, EntryDoc, #{}).
 
 functions(Doc, Opts) ->
     [function(F, Opts) || F <- xmerl_xpath:string("//module/functions/function", Doc)].
