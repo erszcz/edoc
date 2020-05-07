@@ -113,8 +113,10 @@ edoc_extract_type(Doc, Opts) ->
     Name = xpath_to_atom("./typedef/erlangName/@name", Doc, Opts),
     [#xmlElement{content=Content}] = xmerl_xpath:string("./typedef/argtypes", Doc),
     Arity = length(Content),
+    %% TODO: annotation
+    Anno = erl_anno:new(0),
     DocContents = extract_doc_contents("./description/fullDescription", Doc, Opts),
-    docs_v1_entry(type, Name, Arity, #{}, DocContents).
+    docs_v1_entry(type, Name, Arity, Anno, DocContents, #{}).
 
 edoc_extract_functions(Doc, Opts) ->
     [edoc_extract_function(Doc1, Opts) || Doc1 <- xmerl_xpath:string("//module/functions/function", Doc)].
@@ -122,6 +124,8 @@ edoc_extract_functions(Doc, Opts) ->
 edoc_extract_function(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
+    %% TODO: annotation
+    Anno = erl_anno:new(0),
     DocContents =
 	case xmerl_xpath:string("./equiv", Doc) of
 	    [Equiv] ->
@@ -134,7 +138,7 @@ edoc_extract_function(Doc, Opts) ->
 		extract_doc_contents("./description/fullDescription", Doc, Opts)
 	end,
     Metadata = edoc_extract_metadata(Doc, Opts),
-    docs_v1_entry(function, Name, Arity, Metadata, DocContents).
+    docs_v1_entry(function, Name, Arity, Anno, DocContents, Metadata).
 
 -spec doc_content(_, _) -> doc().
 doc_content([], _Opts) -> none;
@@ -153,10 +157,8 @@ module_anno(Doc, Opts) ->
     Line = xpath_to_integer("./@line", Doc, Opts),
     erl_anno:set_file(File, erl_anno:new(Line)).
 
--spec docs_v1_entry(_, _, _, _, _) -> docs_v1_entry().
-docs_v1_entry(Kind, Name, Arity, Metadata, DocContents) ->
-    % TODO annotation
-    Anno = 0,
+-spec docs_v1_entry(_, _, _, _, _, _) -> docs_v1_entry().
+docs_v1_entry(Kind, Name, Arity, Anno, DocContents, Metadata) ->
     % TODO get signature from abstract code
     Signature = [list_to_binary(atom_to_list(Name) ++ "/" ++ integer_to_list(Arity))],
     {{Kind, Name, Arity}, Anno, Signature, DocContents, Metadata}.
