@@ -113,8 +113,7 @@ edoc_extract_type(Doc, Opts) ->
     Name = xpath_to_atom("./typedef/erlangName/@name", Doc, Opts),
     [#xmlElement{content=Content}] = xmerl_xpath:string("./typedef/argtypes", Doc),
     Arity = length(Content),
-    %% TODO: annotation
-    Anno = erl_anno:new(0),
+    Anno = anno(Doc, Opts),
     DocContents = extract_doc_contents("./description/fullDescription", Doc, Opts),
     docs_v1_entry(type, Name, Arity, Anno, DocContents, #{}).
 

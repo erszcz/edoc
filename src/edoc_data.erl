@@ -77,6 +77,9 @@
 %% <!ELEMENT callbacks (callback+)>
 %% <!ELEMENT typedecls (typedecl+)>
 %% <!ELEMENT typedecl (typedef, description?)>
+%% <!ATTLIST typedecl
+%%   label CDATA #REQUIRED
+%%   line CDATA #REQUIRED>
 %% <!ELEMENT functions (function+)>
 
 %% NEW-OPTIONS: private, hidden, todo
@@ -142,9 +145,9 @@ module_args(Vs) ->
     [{args, [{arg, [{argName, [atom_to_list(V)]}]} || V <- Vs]}].
 
 types(Tags, Env) ->
-    [{typedecl, [{label, edoc_types:to_label(Def)}],
+    [{typedecl, [{label, edoc_types:to_label(Def)}, {line, Line}],
       [edoc_types:to_xml(Def, Env)] ++ description(Doc)}
-     || #tag{name = type, data = {Def, Doc}} <- Tags].
+     || #tag{name = type, line = Line, data = {Def, Doc}} <- Tags].
 
 functions(Es, Env, Opts) ->
     [function(Entry, Env, Opts) || Entry = #entry{} <- Es].
