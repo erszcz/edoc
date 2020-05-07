@@ -147,9 +147,7 @@ types(Tags, Env) ->
      || #tag{name = type, data = {Def, Doc}} <- Tags].
 
 functions(Es, Env, Opts) ->
-    [function(N, As, Export, Ts, Env, Opts)
-     || #entry{name = {_,_}=N, args = As, export = Export, data = Ts}
-	    <- Es].
+    [function(Entry, Env, Opts) || Entry = #entry{} <- Es].
 
 hidden_filter(Es, Opts) ->
     Private = proplists:get_bool(private, Opts),
@@ -228,6 +226,7 @@ callback({N, A}, _Env, _Opts) ->
 %% <!ATTLIST function
 %%   name CDATA #REQUIRED
 %%   arity CDATA #REQUIRED
+%%   line CDATA #REQUIRED
 %%   exported NMTOKEN(yes | no) #REQUIRED
 %%   private NMTOKEN(yes | no) #IMPLIED
 %%   hidden NMTOKEN(yes | no) #IMPLIED
@@ -240,10 +239,12 @@ callback({N, A}, _Env, _Opts) ->
 %% <!ELEMENT equiv (expr, see?)>
 %% <!ELEMENT expr (#PCDATA)>
 
-function({N, A}, As, Export, Ts, Env, Opts) ->
+function(Entry, Env, Opts) ->
+    #entry{name = {N, A}, args = As, export = Export, line = Line, data = Ts} = Entry,
     {Args, Ret, Spec} = signature(Ts, As, Env),
     {function, [{name, atom_to_list(N)},
 		{arity, integer_to_list(A)},
+		{line, Line},
 		{exported, yes_or_no(Export)},
 		{private, yes_or_no(is_private(Ts))},
 		{hidden, yes_or_no(is_hidden(Ts))},

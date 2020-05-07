@@ -68,7 +68,7 @@ module(Doc, Options) ->
 -spec edoc_to_chunk(edoc:xmerl_module(), proplists:proplist()) -> docs_v1().
 edoc_to_chunk(Doc, Opts) ->
     [Doc] = xmerl_xpath:string("//module", Doc),
-    Anno = module_anno(Doc, Opts),
+    Anno = anno(Doc, Opts),
     DocContents = extract_doc_contents("./description/fullDescription", Doc, Opts),
     Metadata = edoc_extract_metadata(Doc, Opts),
     Docs = edoc_extract_docs(Doc, Opts),
@@ -124,8 +124,7 @@ edoc_extract_functions(Doc, Opts) ->
 edoc_extract_function(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
-    %% TODO: annotation
-    Anno = erl_anno:new(0),
+    Anno = anno(Doc, Opts),
     DocContents =
 	case xmerl_xpath:string("./equiv", Doc) of
 	    [Equiv] ->
@@ -152,7 +151,7 @@ docs_v1(Anno, ModuleDoc, Metadata, Docs) ->
              metadata = Metadata,
              docs = Docs}.
 
-module_anno(Doc, Opts) ->
+anno(Doc, Opts) ->
     {source, File} = lists:keyfind(source, 1, Opts),
     Line = xpath_to_integer("./@line", Doc, Opts),
     erl_anno:set_file(File, erl_anno:new(Line)).
