@@ -34,6 +34,7 @@ edoc:files(["src/edoc.erl"],
            [{doclet, edoc_doclet_chunks},
             {dir, "/tmp/doctest"},
             {layout, edoc_layout_chunks}]).
+
 {ok, BChunk} = file:read_file("/tmp/doctest/chunks/edoc.chunk").
 Chunk = binary_to_term(BChunk).
 
@@ -72,13 +73,17 @@ edoc:application(recon, [{doclet, edoc_doclet_chunks},
 
 f().
 dbg:stop_clear().
-rr(edoc_data).
+rr(edoc_extract).
+rr(xmerl_lib).
+rr(erl_syntax).
 TraceF = fun (Trace, _) ->
                  rp([calendar:now_to_local_time(os:timestamp()), Trace])
          end.
 dbg:tracer(process, {TraceF, ok}).
 dbg:p(all, call).
-dbg:tpl(edoc_data, function, x).
+%dbg:tpl(edoc_data, function, x).
+%dbg:tpl(edoc_extract, source, x).
+dbg:tpl(edoc_doclet_chunks, trace_this, x).
 
 %dbg:tpl(edoc_layout_chunks, edoc_to_chunk, x).
 %dbg:tpl(edoc_extract, collect, x).
@@ -88,3 +93,6 @@ dbg:tpl(edoc_data, function, x).
 %dbg:tpl(edoc_doclet_chunks, options_with_defaults, x).
 %dbg:tpl(edoc_lib, run_layout, x).
 %dbg:tpl(edoc_lib, run_plugin, x).
+
+%% From an EDoc #entry{} list `Entries` to a pretty printed spec:
+erlang:iolist_to_binary( erl_pp:form(erl_syntax:revert((hd((lists:keyfind({read,1}, #entry.name, Entries))#entry.data))#tag.form)) ).
