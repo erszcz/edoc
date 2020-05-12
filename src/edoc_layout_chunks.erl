@@ -58,15 +58,16 @@
 %% @doc Convert EDoc module documentation to an EEP-48 style doc chunk.
 -spec module(edoc:xmerl_module(), proplists:proplist()) -> binary().
 module(Doc, Options) ->
-    Chunk = edoc_to_chunk(Doc, Options),
+    {entries, Entries} = lists:keyfind(entries, 1, Options),
+    Chunk = edoc_to_chunk(Doc, Entries, Options),
     term_to_binary(Chunk).
 
 %%.
 %%' Chunk construction
 %%
 
--spec edoc_to_chunk(edoc:xmerl_module(), proplists:proplist()) -> docs_v1().
-edoc_to_chunk(Doc, Opts) ->
+-spec edoc_to_chunk(edoc:xmerl_module(), [edoc:entry()], proplists:proplist()) -> docs_v1().
+edoc_to_chunk(Doc, Entries, Opts) ->
     [Doc] = xmerl_xpath:string("//module", Doc),
     Anno = anno(Doc, Opts),
     ModuleDoc = doc_contents("./description/fullDescription", Doc, Opts),

@@ -129,7 +129,11 @@ source1(Tree, File0, Env, Opts, TypeDocs) ->
     Entries2 = edoc_specs:add_data(Entries1, Opts, File, Module),
     edoc_tags:check_types(Entries2, Opts, File),
     Data = edoc_data:module(Module, Entries2, Env2, Opts),
-    {Name, Data}.
+    %% If `return_entries' is given return the EDoc internal representation of tags / code forms.
+    case proplists:is_defined(return_entries, Opts) of
+	true -> {Name, Data, Entries2};
+	false -> {Name, Data}
+    end.
 
 %% @doc Similar to {@link header/5}, but reads the syntax tree and the
 %% comments from the specified file.
