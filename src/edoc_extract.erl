@@ -425,6 +425,7 @@ collect([F | Fs], Cs, Ss, Ts, Rs, As, Header, Mod) ->
                     %% Drop current seen comments.
                     collect(Fs, [], [], [], Rs, As, Header, Mod)
             end;
+	%% TODO: add callback support here
 	_ ->
 	    %% Drop current seen comments.
 	    collect(Fs, [], [], [], [], As, Header, Mod)
