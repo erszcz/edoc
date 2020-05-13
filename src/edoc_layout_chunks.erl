@@ -5,6 +5,8 @@
 -behaviour(edoc_layout).
 -export([module/2]).
 
+-include("edoc.hrl").
+
 -export_type([docs_v1/0,
               docs_v1_entry/0,
               beam_language/0,
@@ -58,20 +60,25 @@
 %% @doc Convert EDoc module documentation to an EEP-48 style doc chunk.
 -spec module(edoc:xmerl_module(), proplists:proplist()) -> binary().
 module(Doc, Options) ->
-    {entries, Entries} = lists:keyfind(entries, 1, Options),
-    Chunk = edoc_to_chunk(Doc, Entries, Options),
+    %% Require `entries' or fail.
+    case lists:keyfind(entries, 1, Options) of
+	{entries, _} -> ok;
+	_ -> erlang:error(no_entries, [Doc, Options])
+    end,
+    Chunk = edoc_to_chunk(Doc, Options),
     term_to_binary(Chunk).
 
 %%.
 %%' Chunk construction
 %%
 
--spec edoc_to_chunk(edoc:xmerl_module(), [edoc:entry()], proplists:proplist()) -> docs_v1().
-edoc_to_chunk(Doc, Entries, Opts) ->
+-spec edoc_to_chunk(edoc:xmerl_module(), proplists:proplist()) -> docs_v1().
+edoc_to_chunk(Doc, Opts) ->
     [Doc] = xmerl_xpath:string("//module", Doc),
     Anno = anno(Doc, Opts),
     ModuleDoc = doc_contents("./description/fullDescription", Doc, Opts),
-    Metadata = metadata(Doc, Opts),
+    Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
+			      meta_since(Doc, Opts)),
     Docs = doc_entries(Doc, Opts),
     docs_v1(Anno, ModuleDoc, Metadata, Docs).
 
@@ -93,13 +100,14 @@ doc_contents(XPath, Doc, Opts) ->
 	    doc_content(xpath_to_chunk(XPath, Doc), Opts)
     end.
 
-metadata(Doc, Opts) ->
-    Since = xpath_to_text("./since", Doc, Opts),
+
+meta_deprecated(Doc, Opts) ->
     Deprecated = xpath_to_text("./deprecated/description/fullDescription", Doc, Opts),
-    %% TODO: should @private and @hidden be stored in metadata?
-    %% TODO: add EDoc version to metadata
-    maps:from_list([{since, Since} || is_truthy(Since)] ++
-		   [{deprecated, Deprecated} || is_truthy(Deprecated)]).
+    [{deprecated, Deprecated} || is_truthy(Deprecated)].
+
+meta_since(Doc, Opts) ->
+    Since = xpath_to_text("./since", Doc, Opts),
+    [{since, Since} || is_truthy(Since)].
 
 is_truthy(<<>>) -> false;
 is_truthy(B) when is_binary(B) -> true.
@@ -116,7 +124,26 @@ type(Doc, Opts) ->
     Arity = length(Content),
     Anno = anno(Doc, Opts),
     EntryDoc = doc_contents("./description/fullDescription", Doc, Opts),
-    docs_v1_entry(type, Name, Arity, Anno, EntryDoc, #{}).
+    Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
+			      meta_since(Doc, Opts) ++
+			      meta_type_sig(Name, Anno, entries(Opts))),
+    docs_v1_entry(type, Name, Arity, Anno, EntryDoc, Metadata).
+
+-spec meta_type_sig(atom(), erl_anno:anno(), [edoc:entry()]) -> Metadata when
+      Metadata :: #{signature => erl_parse:abstract_form()}.
+meta_type_sig(Name, Anno, Entries) ->
+    Line = erl_anno:line(Anno),
+    Tags = edoc_data:get_all_tags(Entries),
+    case lists:keyfind(Line, #tag.line, Tags) of
+	#tag{name = type, line = Line, origin = code} = T ->
+	    TypeTree = T#tag.form,
+	    TypeAttr = erl_syntax:revert(TypeTree),
+	    %% Assert that the lookup by line really gives us the right type attribute:
+	    {attribute, Line, type, {Name, _, _}} = TypeAttr,
+	    [{signature, [TypeAttr]}];
+	_ ->
+	    []
+    end.
 
 callbacks(Doc, Opts) ->
     [callback(C, Opts) || C <- xmerl_xpath:string("//module/callbacks/callback", Doc)].
@@ -129,7 +156,8 @@ callback(Doc, Opts) ->
     %% `edoc_specs' seems like the place to extract this info and pass on as an Edoc `#tag{}'.
     Anno = erl_anno:new(0),
     EntryDoc = none,
-    docs_v1_entry(callback, Name, Arity, Anno, EntryDoc, #{}).
+    Metadata = #{},
+    docs_v1_entry(callback, Name, Arity, Anno, EntryDoc, Metadata).
 
 functions(Doc, Opts) ->
     [function(F, Opts) || F <- xmerl_xpath:string("//module/functions/function", Doc)].
@@ -149,8 +177,25 @@ function(Doc, Opts) ->
 	    [] ->
 		doc_contents("./description/fullDescription", Doc, Opts)
 	end,
-    Metadata = metadata(Doc, Opts),
+    Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
+			      meta_since(Doc, Opts) ++
+			      meta_function_sig({Name, Arity}, entries(Opts))),
     docs_v1_entry(function, Name, Arity, Anno, EntryDoc, Metadata).
+
+-spec meta_function_sig(edoc:function_name(), [edoc:entry()]) -> Metadata when
+      Metadata :: #{signature => erl_parse:abstract_form()}.
+meta_function_sig(NA, Entries) ->
+    #entry{name = NA} = E = lists:keyfind(NA, #entry.name, Entries),
+    case lists:keyfind(spec, #tag.name, E#entry.data) of
+	false -> [];
+	#tag{name = spec} = T ->
+	    [{signature, [erl_syntax:revert(T#tag.form)]}]
+    end.
+
+-spec entries(proplists:proplist()) -> [edoc:entry()].
+entries(Opts) ->
+    {entries, Entries} = lists:keyfind(entries, 1, Opts),
+    Entries.
 
 -spec doc_content(_, _) -> doc().
 doc_content([], _Opts) -> none;
