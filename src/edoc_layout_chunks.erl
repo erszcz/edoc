@@ -5,6 +5,10 @@
 -behaviour(edoc_layout).
 -export([module/2]).
 
+%% This breaks the convention stated in `edoc_doclet' to not rely on `edoc.hrl'
+%% in doclets and layouts.
+%% However, without direct `#entry{}' access it's quite unwieldy to pass spec/type
+%% info for storage in chunks.
 -include("edoc.hrl").
 
 -export_type([docs_v1/0,
