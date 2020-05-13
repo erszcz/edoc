@@ -65,7 +65,8 @@ type(Form, TypeDocs) ->
          data = {#t_typedef{name = TypeName,
                             args = d2e(Args),
                             type = d2e(opaque2abstr(Name, Type))},
-                 Doc}}.
+                 Doc},
+         form = Form}.
 
 -spec spec(Form::syntaxTree(), ClauseN::pos_integer()) -> #tag{}.
 
@@ -75,7 +76,8 @@ spec(Form, Clause) ->
     TypeSpec = lists:nth(Clause, TypeSpecs),
     #tag{name = spec, line = get_line(element(2, TypeSpec)),
          origin = code,
-         data = aspec(d2e(TypeSpec), Name)}.
+         data = aspec(d2e(TypeSpec), Name),
+         form = Form}.
 
 -spec dummy_spec(Form::syntaxTree()) -> #tag{}.
 
