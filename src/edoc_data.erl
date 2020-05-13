@@ -46,6 +46,7 @@
 %%                   functions)>
 %% <!ATTLIST module
 %%   name CDATA #REQUIRED
+%%   line CDATA #REQUIRED
 %%   private NMTOKEN(yes | no) #IMPLIED
 %%   hidden NMTOKEN(yes | no) #IMPLIED
 %%   root CDATA #IMPLIED>
@@ -76,11 +77,19 @@
 %% <!ELEMENT callbacks (callback+)>
 %% <!ELEMENT typedecls (typedecl+)>
 %% <!ELEMENT typedecl (typedef, description?)>
+%% <!ATTLIST typedecl
+%%   label CDATA #REQUIRED
+%%   line CDATA #REQUIRED>
 %% <!ELEMENT functions (function+)>
 
 %% NEW-OPTIONS: private, hidden, todo
 %% DEFER-OPTIONS: edoc_extract:source/4
 
+-spec module(Module, Entries, Env, Opts) -> edoc:xmerl_module() when
+      Module :: edoc:module_meta(),
+      Entries :: [edoc:entry()],
+      Env :: edoc:env(),
+      Opts :: proplists:proplist().
 module(Module, Entries, Env, Opts) ->
     Name = atom_to_list(Module#module.name),
     HeaderEntry = get_entry(module, Entries),
@@ -89,7 +98,8 @@ module(Module, Entries, Env, Opts) ->
     Functions = function_filter(Entries, Opts),
     Out = {module, ([{name, Name},
 		     {root, Env#env.root},
-                     {encoding, Module#module.encoding}]
+                     {encoding, Module#module.encoding},
+		     {line, HeaderEntry#entry.line}]
 		    ++ case is_private(HeaderTags) of
 			   true -> [{private, "yes"}];
 			   false -> []
@@ -135,14 +145,12 @@ module_args(Vs) ->
     [{args, [{arg, [{argName, [atom_to_list(V)]}]} || V <- Vs]}].
 
 types(Tags, Env) ->
-    [{typedecl, [{label, edoc_types:to_label(Def)}],
+    [{typedecl, [{label, edoc_types:to_label(Def)}, {line, Line}],
       [edoc_types:to_xml(Def, Env)] ++ description(Doc)}
-     || #tag{name = type, data = {Def, Doc}} <- Tags].
+     || #tag{name = type, line = Line, data = {Def, Doc}} <- Tags].
 
 functions(Es, Env, Opts) ->
-    [function(N, As, Export, Ts, Env, Opts)
-     || #entry{name = {_,_}=N, args = As, export = Export, data = Ts}
-	    <- Es].
+    [function(Entry, Env, Opts) || Entry = #entry{} <- Es].
 
 hidden_filter(Es, Opts) ->
     Private = proplists:get_bool(private, Opts),
@@ -221,7 +229,10 @@ callback({N, A}, _Env, _Opts) ->
 %% <!ATTLIST function
 %%   name CDATA #REQUIRED
 %%   arity CDATA #REQUIRED
+%%   line CDATA #REQUIRED
 %%   exported NMTOKEN(yes | no) #REQUIRED
+%%   private NMTOKEN(yes | no) #IMPLIED
+%%   hidden NMTOKEN(yes | no) #IMPLIED
 %%   label CDATA #IMPLIED>
 %% <!ELEMENT args (arg*)>
 %% <!ELEMENT arg (argName, description?)>
@@ -231,14 +242,15 @@ callback({N, A}, _Env, _Opts) ->
 %% <!ELEMENT equiv (expr, see?)>
 %% <!ELEMENT expr (#PCDATA)>
 
-function({N, A}, As, Export, Ts, Env, Opts) ->
+function(Entry, Env, Opts) ->
+    #entry{name = {N, A}, args = As, export = Export, line = Line, data = Ts} = Entry,
     {Args, Ret, Spec} = signature(Ts, As, Env),
     {function, [{name, atom_to_list(N)},
 		{arity, integer_to_list(A)},
-      		{exported, case Export of
-			       true -> "yes";
-			       false -> "no"
-			   end},
+		{line, Line},
+		{exported, yes_or_no(Export)},
+		{private, yes_or_no(is_private(Ts))},
+		{hidden, yes_or_no(is_hidden(Ts))},
 		{label, edoc_refs:to_label(edoc_refs:function(N, A))}],
      [{args, [{arg, [{argName, [atom_to_list(A)]}] ++ description(D)}
 	      || {A, D} <- Args]}]
@@ -255,6 +267,9 @@ function({N, A}, As, Export, Ts, Env, Opts) ->
      ++ sees(Ts, Env)
      ++ todos(Ts, Opts)
     }.
+
+yes_or_no(true) -> "yes";
+yes_or_no(false) -> "no".
 
 get_throws(Ts, Env) ->
     case get_tags(throws, Ts) of

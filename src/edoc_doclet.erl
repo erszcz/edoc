@@ -42,29 +42,26 @@
 
 -type command() :: doclet_gen()
 		 | doclet_toc().
+%% Doclet commands.
 
-%% @type context().
-%%    Context for doclets.
 -type context() :: #doclet_context{dir :: string(),
-				   env :: edoc_lib:edoc_env(),
+				   env :: edoc:env(),
 				   opts :: [term()]}.
+%% Context for doclets.
 
-%% @type no_app().
-%%    A value used to mark absence of an Erlang application
-%%    context. Use the macro `NO_APP' defined in
-%%    <a href="edoc_doclet.hrl">`edoc_doclet.hrl'</a>
-%%    to produce this value.
 -type no_app() :: ?NO_APP.
+%% A value used to mark absence of an Erlang application
+%% context. Use the macro `NO_APP' defined in
+%% <a href="edoc_doclet.hrl">`edoc_doclet.hrl'</a>
+%% to produce this value.
 
-%% @type doclet_gen().
-%%    Doclet command.
 -type doclet_gen() :: #doclet_gen{sources :: [string()],
 				  app :: no_app() | atom(),
 				  modules :: [module()]}.
+%% Doclet command.
 
-%% @type doclet_toc().
-%%    Doclet command.
 -type doclet_toc() :: #doclet_toc{paths :: [string()],
 				  indir :: string()}.
+%% Doclet command.
 
 -callback run(command(), context()) -> ok.

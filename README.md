@@ -15,12 +15,24 @@ $ rebar3 compile
 
 ## Use
 
+### Make doc chunks - CLI
+
+```
+ERL_LIBS=/Users/erszcz/work/erszcz/edoc/_build/default/lib/ \
+    bin/edoc.escript -chunks -pa _build/default/lib/edoc/ebin/ -app edoc
+```
+
+`ERL_LIBS` is necessary for the out-of-OTP EDoc to be first in the Erlang code path.
+Otherwise, OTP-shipped EDoc with no chunks support would be used.
+
+### Make doc chunks - Rebar3 plugin
+
 Put this in your `rebar.config`:
 
 ```
 {plugins,
  [
-  {rebar3_edoc_chunks, {git, "https://github.com/erszcz/edoc.git", {branch, "import-docs-chunks"}}}
+  {rebar3_edoc_chunks, {git, "https://github.com/erszcz/edoc.git", {branch, "wip"}}}
  ]}.
 
 {provider_hooks,
@@ -29,12 +41,16 @@ Put this in your `rebar.config`:
  ]}.
 ```
 
-Then build and run ExDoc:
+Then just `rebar3 compile` and find the chunks under
+`_build/default/lib/$PROJECT/doc/chunks`.
+
+### Run ExDoc
+
+Build and run ExDoc:
 
 ```
-rebar3 compile
 /Users/erszcz/work/elixir-lang/ex_doc/ex_doc \
-    edoc 0.12 _build/default/lib/edoc/ebin -m edoc -o docs
+    edoc "0.11" _build/default/lib/edoc/ebin --main edoc
 ```
 
 Please note that as of now
