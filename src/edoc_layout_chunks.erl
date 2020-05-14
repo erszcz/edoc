@@ -160,8 +160,20 @@ callback(Doc, Opts) ->
     %% `edoc_specs' seems like the place to extract this info and pass on as an Edoc `#tag{}'.
     Anno = erl_anno:new(0),
     EntryDoc = none,
-    Metadata = #{},
+    Metadata = maps:from_list(meta_callback_sig(Name, Arity, entries(Opts))),
     docs_v1_entry(callback, Name, Arity, Anno, EntryDoc, Metadata).
+
+-spec meta_callback_sig(atom(), arity(), [edoc:entry()]) -> Metadata when
+      Metadata :: #{signature => erl_parse:abstract_form()}.
+meta_callback_sig(Name, Arity, Entries) ->
+    Tags = edoc_data:get_all_tags(Entries),
+    case lists:keyfind({callback, {Name, Arity}}, #tag.data, Tags) of
+	#tag{name = callback, line = Line, origin = code} = T ->
+	    CbAttr = T#tag.form,
+	    [{signature, [CbAttr]}];
+	_ ->
+	    []
+    end.
 
 functions(Doc, Opts) ->
     [function(F, Opts) || F <- xmerl_xpath:string("//module/functions/function", Doc)].

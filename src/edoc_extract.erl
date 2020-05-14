@@ -613,11 +613,12 @@ get_callbacks(_EntryName, CbForms) ->
     [ callback(F) || F <- CbForms ].
 
 callback(F) ->
+    {attribute,_,callback,{NA,_}} = Attr = erl_syntax:revert(F),
     #tag{name = callback,
 	 line = erl_syntax:get_pos(F),
 	 origin = code,
-	 data = [],
-	 form = erl_syntax:revert(F)}.
+	 data = {callback,NA},
+	 form = Attr}.
 
 %% Scanning a list of separate comments for tags.
 
