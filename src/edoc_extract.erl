@@ -126,7 +126,7 @@ source1(Tree, File0, Env, Opts, TypeDocs) ->
 		   root = ""},
     Env2 = add_macro_defs(module_macros(Env1), Opts, Env1),
     Entries1 = get_tags([Header, Footer | Entries], Env2, File, TypeDocs),
-    Entries2 = edoc_specs:add_data(Entries1, Opts, File, Module),
+    Entries2 = edoc_specs:add_type_data(Entries1, Opts, File, Module),
     edoc_tags:check_types(Entries2, Opts, File),
     Data = edoc_data:module(Module, Entries2, Env2, Opts),
     %% If `return_entries' is given return the EDoc internal representation of tags / code forms.

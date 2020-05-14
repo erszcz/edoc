@@ -23,7 +23,7 @@
 
 -export([type/2, spec/2, dummy_spec/1, docs/2]).
 
--export([add_data/4, tag/1, is_tag/1]).
+-export([add_type_data/4, tag/1, is_tag/1]).
 
 -include("edoc.hrl").
 -include("edoc_types.hrl").
@@ -103,12 +103,12 @@ docs(Forms, CommentFun) ->
 %% Exported types and types used (indirectly) by Erlang specs are
 %% added to the entries.
 
--spec add_data(Entries, Opts, File, Module) -> [edoc:entry()] when
+-spec add_type_data(Entries, Opts, File, Module) -> [edoc:entry()] when
       Entries :: [edoc:entry()],
       Opts :: proplists:proplist(),
       File :: file:filename(),
       Module :: edoc:module_meta().
-add_data(Entries, Opts, File, Module) ->
+add_type_data(Entries, Opts, File, Module) ->
     TypeDefs0 = espec_types(Entries),
     TypeTable = ets:new(etypes, [ordered_set]),
     Es1 = expand_records(Entries, TypeDefs0, TypeTable, Opts, File, Module),
