@@ -155,24 +155,30 @@ callbacks(Doc, Opts) ->
 callback(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
-    %% TODO: callback annotations - edoc_data does not get this info from source, but from
-    %% running `M:behaviour_info/1', so there's more work needed to get `-callback' line info.
-    %% `edoc_specs' seems like the place to extract this info and pass on as an Edoc `#tag{}'.
-    Anno = erl_anno:new(0),
-    EntryDoc = none,
-    Metadata = maps:from_list(meta_callback_sig(Name, Arity, entries(Opts))),
+    Entries = entries(Opts),
+    Tags = edoc_data:get_all_tags(Entries),
+    {Line, DocContent, Meta} =
+	case lists:filter(select_callback(Name, Arity), Tags) of
+	    [#tag{name = callback, origin = code} = T] ->
+		#tag{line = L, data = {_, D0}, form = F} = T,
+		D1 = case D0 of
+			 none -> none;
+			 _ -> xmerl_to_binary(D0)
+		     end,
+		{L, [D1], [{signature, [F]}]};
+	    _ ->
+		%% TODO: callback placeholders...
+		{0, none, []}
+	end,
+    Anno = erl_anno:new(Line),
+    EntryDoc = doc_content(DocContent, Opts),
+    Metadata = maps:from_list(Meta),
     docs_v1_entry(callback, Name, Arity, Anno, EntryDoc, Metadata).
 
--spec meta_callback_sig(atom(), arity(), [edoc:entry()]) -> Metadata when
-      Metadata :: #{signature => erl_parse:abstract_form()}.
-meta_callback_sig(Name, Arity, Entries) ->
-    Tags = edoc_data:get_all_tags(Entries),
-    case lists:keyfind({callback, {Name, Arity}}, #tag.data, Tags) of
-	#tag{name = callback, line = Line, origin = code} = T ->
-	    CbAttr = T#tag.form,
-	    [{signature, [CbAttr]}];
-	_ ->
-	    []
+select_callback(Name, Arity) ->
+    fun (#tag{name = callback, data = {{N, A}, _}})
+	  when N =:= Name, A =:= Arity -> true;
+	(_) -> false
     end.
 
 functions(Doc, Opts) ->
@@ -244,10 +250,13 @@ xpath_to_text(XPath, Doc, Opts) ->
 	    {_ , Value} = format_attribute(Attr),
 	    hd(shell_docs:normalize([Value]));
 	[#xmlElement{}] = Elements ->
-	    iolist_to_binary(chunk_to_text(xmerl_to_chunk(Elements)));
+	    xmerl_to_binary(Elements);
 	[_|_] ->
 	    erlang:error(multiple_nodes, [XPath, Doc, Opts])
     end.
+
+xmerl_to_binary(XML) ->
+    iolist_to_binary(chunk_to_text(xmerl_to_chunk(XML))).
 
 chunk_to_text([]) -> [];
 chunk_to_text([Node | Nodes]) ->

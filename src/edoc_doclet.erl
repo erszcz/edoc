@@ -65,3 +65,4 @@
 %% Doclet command.
 
 -callback run(command(), context()) -> ok.
+%% Doclet entrypoint.

@@ -52,7 +52,7 @@ type(Form, TypeDocs) ->
             {N,T,As} ->
                 type = tag(Name),
                 Doc0 =
-                    case dict:find({N, length(As)}, TypeDocs) of
+                    case dict:find({type, {N, length(As)}}, TypeDocs) of
                         {ok, Doc1} ->
                             Doc1;
                         error ->
@@ -138,7 +138,7 @@ find_type_docs([], Cs, _Fun) ->
     dict:from_list(Cs);
 find_type_docs([F | Fs], Cs, Fun) ->
     try get_name_and_last_line(F) of
-        {Name, LastTypeLine} ->
+        {Kind, Name, LastTypeLine} ->
             C0 = erl_syntax:comment(["% @type f(). "]),
             C1 = erl_syntax:set_pos(C0, LastTypeLine),
             %% Postcomments before the dot after the typespec are ignored.
@@ -152,7 +152,7 @@ find_type_docs([F | Fs], Cs, Fun) ->
                     find_type_docs(Fs, Cs, Fun);
                 Doc ->
                     W = edoc_wiki:parse_xml(Doc, LastTypeLine),
-                    find_type_docs(Fs, [{Name, W}|Cs], Fun)
+                    find_type_docs(Fs, [{{Kind, Name}, W}|Cs], Fun)
             end
     catch _:_ ->
             find_type_docs(Fs, Cs, Fun)
@@ -210,13 +210,12 @@ get_name_and_last_line(F) ->
     undefined = put('$max_line', 0),
     _ = erl_parse:map_anno(Fun, Attr),
     Line = erase('$max_line'),
-    AttrName = case Data of
-		   _Callback = {NameArity, _} ->
-		       NameArity;
-		   _Type = {N, _T, As} when is_atom(N) -> % skip records
-		       {N, length(As)}
-	       end,
-    {AttrName, Line}.
+    case Data of
+        _Callback = {NameArity, _} ->
+            {callback, NameArity, Line};
+        _Type = {N, _T, As} when is_atom(N) -> % skip records
+            {type, {N, length(As)}, Line}
+    end.
 
 get_line(Anno) ->
     erl_anno:line(Anno).

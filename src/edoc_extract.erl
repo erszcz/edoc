@@ -604,20 +604,24 @@ get_tags([#entry{name = Name, data = {Cs,Cbs,Specs,Types,Records}} = E | Es],
     Ts4 = edoc_tags:parse_tags(Ts3, How, Env, Where),
     Ts = selected_specs(Specs1, Ts4),
     ETypes = [edoc_specs:type(Type, TypeDocs) || Type <- Types ++ Records],
-    Callbacks = get_callbacks(Name, Cbs),
+    Callbacks = get_callbacks(Name, Cbs, TypeDocs),
     [E#entry{data = Ts ++ ETypes ++ Callbacks} | get_tags(Es, Tags, Env, How, File, TypeDocs)];
 get_tags([], _, _, _, _, _) ->
     [].
 
-get_callbacks(_EntryName, CbForms) ->
-    [ callback(F) || F <- CbForms ].
+get_callbacks(_EntryName, CbForms, TypeDocs) ->
+    [ callback(F, TypeDocs) || F <- CbForms ].
 
-callback(F) ->
+callback(F, TypeDocs) ->
     {attribute,_,callback,{NA,_}} = Attr = erl_syntax:revert(F),
+    Doc = case dict:find({callback, NA}, TypeDocs) of
+	      error -> none;
+	      {ok, D} -> D
+	  end,
     #tag{name = callback,
 	 line = erl_syntax:get_pos(F),
 	 origin = code,
-	 data = {callback,NA},
+	 data = {NA, Doc},
 	 form = Attr}.
 
 %% Scanning a list of separate comments for tags.
