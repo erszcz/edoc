@@ -387,57 +387,70 @@ preprocess_forms_2(F, Fs) ->
 %% in the list.
 
 collect(Fs, Mod) ->
-    collect(Fs, [], [], [], [], [], undefined, Mod).
+    Acc = #{comments => [], specs => [], types => [],
+	    records => [], functions => [], header => undefined},
+    collect(Fs, Acc, Mod).
 
-collect([F | Fs], Cs, Ss, Ts, Rs, As, Header, Mod) ->
+collect([F | Fs], Acc, Mod) ->
+    #{comments := Cs, specs := Ss, types := Ts,
+      records := Rs, header := Header} = Acc,
     case erl_syntax_lib:analyze_form(F) of
 	comment ->
-	    collect(Fs, [F | Cs], Ss, Ts, Rs, As, Header, Mod);
+	    collect(Fs, store(comments, F, Acc), Mod);
 	{function, Name} ->
 	    L = erl_syntax:get_pos(F),
 	    Export = ordsets:is_element(Name, Mod#module.exports),
 	    Args = parameters(erl_syntax:function_clauses(F)),
-	    collect(Fs, [], [], [], [],
-                    [#entry{name = Name, args = Args, line = L,
-                            export = Export,
-                            data = {comment_text(Cs),Ss,Ts,Rs}} | As],
-		    Header, Mod);
+	    Function = #entry{name = Name, args = Args, line = L,
+			      export = Export,
+			      data = {comment_text(Cs), Ss, Ts, Rs}},
+	    NewAcc = Acc#{comments := [], specs := [], types := [], records := []},
+	    collect(Fs, store(functions, Function, NewAcc), Mod);
 	{attribute, {module, _}} when Header =:= undefined ->
 	    L = erl_syntax:get_pos(F),
-	    collect(Fs, [], [], [], [], As,
-                    #entry{name = module, line = L,
-                           data = {comment_text(Cs),Ss,Ts,Rs}},
-		    Mod);
-        {attribute, {record, {_Name, Fields}}} ->
-            case is_typed_record(Fields) of
-                true ->
-                    collect(Fs, Cs, Ss, Ts, [F | Rs], As, Header, Mod);
-                false ->
-                    collect(Fs, Cs, Ss, Ts, Rs, As, Header, Mod)
-            end;
-        {attribute, {N, _}} ->
-            case edoc_specs:tag(N) of
-                spec ->
-                    collect(Fs, Cs, [F | Ss], Ts, Rs, As, Header, Mod);
-                type ->
-                    collect(Fs, Cs, Ss, [F | Ts], Rs, As, Header, Mod);
-                unknown ->
-                    %% Drop current seen comments.
-                    collect(Fs, [], [], [], Rs, As, Header, Mod)
-            end;
+	    NewAcc = Acc#{comments := [], specs := [], types := [], records := []},
+	    NewHeader = #entry{name = module, line = L,
+			       data = {comment_text(Cs), Ss, Ts, Rs}},
+	    collect(Fs, store(header, NewHeader, NewAcc), Mod);
+	{attribute, {record, {_Name, Fields}}} ->
+	    case is_typed_record(Fields) of
+		true ->
+		    collect(Fs, store(records, F, Acc), Mod);
+		false ->
+		    collect(Fs, Acc, Mod)
+	    end;
+	{attribute, {N, _}} ->
+	    case edoc_specs:tag(N) of
+		spec ->
+		    collect(Fs, store(specs, F, Acc), Mod);
+		type ->
+		    collect(Fs, store(types, F, Acc), Mod);
+		unknown ->
+		    %% Drop current seen comments.
+		    NewAcc = Acc#{comments := [], specs := [], types := []},
+		    collect(Fs, NewAcc, Mod)
+	    end;
 	%% TODO: add callback support here
 	_ ->
 	    %% Drop current seen comments.
-	    collect(Fs, [], [], [], [], As, Header, Mod)
+	    NewAcc = Acc#{comments := [], specs := [], types := [], records := []},
+	    collect(Fs, NewAcc, Mod)
     end;
-collect([], Cs, Ss, Ts, Rs, As, Header, _Mod) ->
-    Footer = #entry{name = footer, data = {comment_text(Cs),Ss,Ts,Rs}},
+collect([], Acc, _Mod) ->
+    #{comments := Cs, specs := Ss, types := Ts,
+      records := Rs, functions := As, header := Header} = Acc,
+    Footer = #entry{name = footer, data = {comment_text(Cs), Ss, Ts, Rs}},
     As1 = lists:reverse(As),
     if Header =:= undefined ->
-	    {#entry{name = module, data = {[],[],[],[]}}, Footer, As1};
+	   {#entry{name = module, data = {[],[],[],[]}}, Footer, As1};
        true ->
-	    {Header, Footer, As1}
+	   {Header, Footer, As1}
     end.
+
+store(header, Value, Acc) ->
+    Acc#{header := Value};
+store(Key, Value, Acc) ->
+    maps:update_with(Key, fun (Vs) -> [Value | Vs] end, Acc).
 
 is_typed_record([]) ->
     false;
