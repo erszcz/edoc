@@ -245,8 +245,10 @@ use_tags(#entry{data = Ts}=E, TypeTable) ->
 
 use_tags([], E, _TypeTable, NTs) ->
     E#entry{data = lists:reverse(NTs)};
-use_tags([#tag{origin = code}=T | Ts], E, TypeTable, NTs) ->
+use_tags([#tag{origin = code} = T | Ts], E, TypeTable, NTs) ->
     case tag(T#tag.name) of
+        callback ->
+            use_tags(Ts, E, TypeTable, [T | NTs]);
         spec ->
             Args = params(T, E#entry.args),
             use_tags(Ts, E#entry{args = Args}, TypeTable, [T | NTs]);
@@ -632,8 +634,9 @@ analyze_type_attribute(Form) ->
 %% @doc Return `true' if `Tag' is one of the specification and type
 %% attribute tags recognized by the Erlang compiler.
 
--spec is_tag(Tag::atom()) -> boolean().
+-spec is_tag(Tag :: tag_kind() | term()) -> boolean().
 
+is_tag(callback) -> true;
 is_tag(opaque) -> true;
 is_tag(spec) -> true;
 is_tag(type) -> true;
@@ -641,9 +644,10 @@ is_tag(_) -> false.
 
 %% @doc Return the kind of the attribute tag.
 
--type tag_kind() :: 'type' | 'spec' | 'unknown'.
--spec tag(Tag::atom()) -> tag_kind().
+-type tag_kind() :: 'callback' | 'spec' | 'type'.
+-spec tag(Tag :: atom()) -> tag_kind() | unknown.
 
+tag(callback) -> callback;
 tag(opaque) -> type;
 tag(spec) -> spec;
 tag(type) -> type;

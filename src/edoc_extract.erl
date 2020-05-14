@@ -387,7 +387,7 @@ preprocess_forms_2(F, Fs) ->
 %% in the list.
 
 collect(Fs, Mod) ->
-    Acc = #{comments => [], specs => [], types => [],
+    Acc = #{comments => [], callbacks => [], specs => [], types => [],
 	    records => [], functions => [], header => undefined},
     collect(Fs, Acc, Mod).
 
@@ -403,14 +403,14 @@ collect([F | Fs], Acc, Mod) ->
 	    Args = parameters(erl_syntax:function_clauses(F)),
 	    Function = #entry{name = Name, args = Args, line = L,
 			      export = Export,
-			      data = {comment_text(Cs), Ss, Ts, Rs}},
+			      data = {comment_text(Cs), [], Ss, Ts, Rs}},
 	    NewAcc = Acc#{comments := [], specs := [], types := [], records := []},
 	    collect(Fs, store(functions, Function, NewAcc), Mod);
 	{attribute, {module, _}} when Header =:= undefined ->
 	    L = erl_syntax:get_pos(F),
 	    NewAcc = Acc#{comments := [], specs := [], types := [], records := []},
 	    NewHeader = #entry{name = module, line = L,
-			       data = {comment_text(Cs), Ss, Ts, Rs}},
+			       data = {comment_text(Cs), [], Ss, Ts, Rs}},
 	    collect(Fs, store(header, NewHeader, NewAcc), Mod);
 	{attribute, {record, {_Name, Fields}}} ->
 	    case is_typed_record(Fields) of
@@ -421,6 +421,8 @@ collect([F | Fs], Acc, Mod) ->
 	    end;
 	{attribute, {N, _}} ->
 	    case edoc_specs:tag(N) of
+		callback ->
+		    collect(Fs, store(callbacks, F, Acc), Mod);
 		spec ->
 		    collect(Fs, store(specs, F, Acc), Mod);
 		type ->
@@ -430,19 +432,18 @@ collect([F | Fs], Acc, Mod) ->
 		    NewAcc = Acc#{comments := [], specs := [], types := []},
 		    collect(Fs, NewAcc, Mod)
 	    end;
-	%% TODO: add callback support here
 	_ ->
 	    %% Drop current seen comments.
 	    NewAcc = Acc#{comments := [], specs := [], types := [], records := []},
 	    collect(Fs, NewAcc, Mod)
     end;
 collect([], Acc, _Mod) ->
-    #{comments := Cs, specs := Ss, types := Ts,
+    #{comments := Cs, callbacks := Cbs, specs := Ss, types := Ts,
       records := Rs, functions := As, header := Header} = Acc,
-    Footer = #entry{name = footer, data = {comment_text(Cs), Ss, Ts, Rs}},
+    Footer = #entry{name = footer, data = {comment_text(Cs), Cbs, Ss, Ts, Rs}},
     As1 = lists:reverse(As),
     if Header =:= undefined ->
-	   {#entry{name = module, data = {[],[],[],[]}}, Footer, As1};
+	   {#entry{name = module, data = {[],[],[],[],[]}}, Footer, As1};
        true ->
 	   {Header, Footer, As1}
     end.
@@ -593,7 +594,7 @@ get_tags(Es, Env, File, TypeDocs) ->
     How = dict:from_list(edoc_tags:tag_parsers()),
     get_tags(Es, Tags, Env, How, File, TypeDocs).
 
-get_tags([#entry{name = Name, data = {Cs,Specs,Types,Records}} = E | Es],
+get_tags([#entry{name = Name, data = {Cs,Cbs,Specs,Types,Records}} = E | Es],
          Tags, Env, How, File, TypeDocs) ->
     Where = {File, Name},
     Ts0 = scan_tags(Cs),
@@ -603,9 +604,20 @@ get_tags([#entry{name = Name, data = {Cs,Specs,Types,Records}} = E | Es],
     Ts4 = edoc_tags:parse_tags(Ts3, How, Env, Where),
     Ts = selected_specs(Specs1, Ts4),
     ETypes = [edoc_specs:type(Type, TypeDocs) || Type <- Types ++ Records],
-    [E#entry{data = Ts++ETypes} | get_tags(Es, Tags, Env, How, File, TypeDocs)];
+    Callbacks = get_callbacks(Name, Cbs),
+    [E#entry{data = Ts ++ ETypes ++ Callbacks} | get_tags(Es, Tags, Env, How, File, TypeDocs)];
 get_tags([], _, _, _, _, _) ->
     [].
+
+get_callbacks(_EntryName, CbForms) ->
+    [ callback(F) || F <- CbForms ].
+
+callback(F) ->
+    #tag{name = callback,
+	 line = erl_syntax:get_pos(F),
+	 origin = code,
+	 data = [],
+	 form = erl_syntax:revert(F)}.
 
 %% Scanning a list of separate comments for tags.
 
