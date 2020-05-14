@@ -192,7 +192,11 @@ strip([_ | S]) ->
 %% Should use syntax_tools but this has to do for now.
 get_name_and_last_line(F) ->
     {Name, Data} = analyze_type_attribute(F),
-    type = edoc_specs:tag(Name),
+    case edoc_specs:tag(Name) of
+	callback -> ok;
+	type -> ok;
+	_ -> erlang:error(invalid_tag, [F])
+    end,
     Attr = {attribute, erl_syntax:get_pos(F), Name, Data},
     Fun = fun(A) ->
                   Line = get_line(A),
@@ -206,11 +210,13 @@ get_name_and_last_line(F) ->
     undefined = put('$max_line', 0),
     _ = erl_parse:map_anno(Fun, Attr),
     Line = erase('$max_line'),
-    TypeName = case Data of
-                   {N, _T, As} when is_atom(N) -> % skip records
-                       {N, length(As)}
-               end,
-    {TypeName, Line}.
+    AttrName = case Data of
+		   _Callback = {NameArity, _} ->
+		       NameArity;
+		   _Type = {N, _T, As} when is_atom(N) -> % skip records
+		       {N, length(As)}
+	       end,
+    {AttrName, Line}.
 
 get_line(Anno) ->
     erl_anno:line(Anno).
@@ -624,6 +630,8 @@ type_name(#tag{name = type,
 analyze_type_attribute(Form) ->
     Name = erl_syntax:atom_value(erl_syntax:attribute_name(Form)),
     case tag(Name) of
+	callback ->
+            erl_syntax_lib:analyze_wild_attribute(Form);
         type ->
             erl_syntax_lib:analyze_wild_attribute(Form);
         _ when Name =:= record ->
