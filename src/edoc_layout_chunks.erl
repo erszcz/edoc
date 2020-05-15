@@ -130,12 +130,12 @@ type(Doc, Opts) ->
     EntryDoc = doc_contents("./description/fullDescription", Doc, Opts),
     Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
 			      meta_since(Doc, Opts) ++
-			      meta_type_sig(Name, Anno, entries(Opts))),
+			      meta_type_sig(Name, Arity, Anno, entries(Opts))),
     docs_v1_entry(type, Name, Arity, Anno, EntryDoc, Metadata).
 
--spec meta_type_sig(atom(), erl_anno:anno(), [edoc:entry()]) -> Metadata when
+-spec meta_type_sig(atom(), arity(), erl_anno:anno(), [edoc:entry()]) -> Metadata when
       Metadata :: #{signature => erl_parse:abstract_form()}.
-meta_type_sig(Name, Anno, Entries) ->
+meta_type_sig(Name, Arity, Anno, Entries) ->
     Line = erl_anno:line(Anno),
     Tags = edoc_data:get_all_tags(Entries),
     case lists:keyfind(Line, #tag.line, Tags) of
@@ -143,7 +143,8 @@ meta_type_sig(Name, Anno, Entries) ->
 	    TypeTree = T#tag.form,
 	    TypeAttr = erl_syntax:revert(TypeTree),
 	    %% Assert that the lookup by line really gives us the right type attribute:
-	    {attribute, Line, type, {Name, _, _}} = TypeAttr,
+	    {attribute, _, type, {Name, _, Args}} = TypeAttr,
+	    {Name, Arity} = {Name, length(Args)},
 	    [{signature, [TypeAttr]}];
 	_ ->
 	    []
