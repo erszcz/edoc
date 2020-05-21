@@ -2,8 +2,15 @@
 
 [![TravisCI Build Status](https://travis-ci.org/erszcz/edoc.svg?branch=master)](https://travis-ci.org/erszcz/edoc)
 
-EDoc OTP library extracted from [Erlang/OTP](https://github.com/erlang/otp).
-The aim of this fork is to make EDoc emit `Docs` chunks.
+OTP 23.0 ships with [EEP-48](https://github.com/erlang/eep/blob/master/eeps/eep-0048.md) support
+and [online help in the shell](http://blog.erlang.org/OTP-23-Highlights/).
+This support is based on doc chunks, a new format for storing Erlang module documentation.
+This fork of EDoc emits doc chunks for non-OTP projects.
+It means online help will be available for all Erlang projects using EDoc.
+
+The expected end of life of this project is merging back into OTP once the
+changes are polished enough. See
+https://github.com/erlef/documentation-wg/issues/4 for progress reports.
 
 
 ## Build
@@ -14,6 +21,10 @@ $ rebar3 compile
 
 
 ## Use
+
+You can generate doc chunks for your project in two ways: via a command line script
+or by using a Rebar3 plugin.
+
 
 ### Make doc chunks - CLI
 
@@ -44,9 +55,14 @@ Put this in your `rebar.config`:
 Then just `rebar3 compile` and find the chunks under
 `_build/default/lib/$PROJECT/doc/chunks`.
 
-### Run ExDoc
+See https://github.com/erszcz/kvs/blob/4feb22b5397e2ffa620dab15e72e84893d9de8ef/rebar.config
+for a working `rebar.config` example using profiles.
 
-Build and run ExDoc:
+### Generate ExDoc HTML documentation
+
+It's also possible to use an experimental branch of ExDoc to generate HTML
+docs from the chunks.
+Build ExDoc and then:
 
 ```
 /Users/erszcz/work/elixir-lang/ex_doc/ex_doc \

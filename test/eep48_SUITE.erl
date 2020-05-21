@@ -59,7 +59,7 @@ test_metadata(Config) ->
     %% GIVEN
     DataDir = ?config(data_dir, Config),
     PrivDir = ?config(priv_dir, Config),
-    {ok, Chunk} = get_doc_chunk(DataDir, PrivDir, tags),
+    {ok, Chunk} = get_doc_chunk(DataDir, PrivDir, eep48_SUITE_fixtures),
     Docs = Chunk#docs_v1.docs,
     %% WHEN / THEN
     Meta1 = get_metadata(hd(lookup_function(deprecated_example, 0, Docs))),

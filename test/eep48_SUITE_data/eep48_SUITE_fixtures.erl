@@ -1,4 +1,4 @@
--module(tags).
+-module(eep48_SUITE_fixtures).
 
 -export([deprecated_example/0,
 	 since_example/0]).

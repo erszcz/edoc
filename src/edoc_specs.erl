@@ -23,7 +23,7 @@
 
 -export([type/2, spec/2, dummy_spec/1, docs/2]).
 
--export([add_data/4, tag/1, is_tag/1]).
+-export([add_type_data/4, tag/1, is_tag/1]).
 
 -include("edoc.hrl").
 -include("edoc_types.hrl").
@@ -52,7 +52,7 @@ type(Form, TypeDocs) ->
             {N,T,As} ->
                 type = tag(Name),
                 Doc0 =
-                    case dict:find({N, length(As)}, TypeDocs) of
+                    case dict:find({type, {N, length(As)}}, TypeDocs) of
                         {ok, Doc1} ->
                             Doc1;
                         error ->
@@ -103,12 +103,12 @@ docs(Forms, CommentFun) ->
 %% Exported types and types used (indirectly) by Erlang specs are
 %% added to the entries.
 
--spec add_data(Entries, Opts, File, Module) -> [edoc:entry()] when
+-spec add_type_data(Entries, Opts, File, Module) -> [edoc:entry()] when
       Entries :: [edoc:entry()],
       Opts :: proplists:proplist(),
       File :: file:filename(),
       Module :: edoc:module_meta().
-add_data(Entries, Opts, File, Module) ->
+add_type_data(Entries, Opts, File, Module) ->
     TypeDefs0 = espec_types(Entries),
     TypeTable = ets:new(etypes, [ordered_set]),
     Es1 = expand_records(Entries, TypeDefs0, TypeTable, Opts, File, Module),
@@ -138,7 +138,7 @@ find_type_docs([], Cs, _Fun) ->
     dict:from_list(Cs);
 find_type_docs([F | Fs], Cs, Fun) ->
     try get_name_and_last_line(F) of
-        {Name, LastTypeLine} ->
+        {Kind, Name, LastTypeLine} ->
             C0 = erl_syntax:comment(["% @type f(). "]),
             C1 = erl_syntax:set_pos(C0, LastTypeLine),
             %% Postcomments before the dot after the typespec are ignored.
@@ -152,7 +152,7 @@ find_type_docs([F | Fs], Cs, Fun) ->
                     find_type_docs(Fs, Cs, Fun);
                 Doc ->
                     W = edoc_wiki:parse_xml(Doc, LastTypeLine),
-                    find_type_docs(Fs, [{Name, W}|Cs], Fun)
+                    find_type_docs(Fs, [{{Kind, Name}, W}|Cs], Fun)
             end
     catch _:_ ->
             find_type_docs(Fs, Cs, Fun)
@@ -192,7 +192,11 @@ strip([_ | S]) ->
 %% Should use syntax_tools but this has to do for now.
 get_name_and_last_line(F) ->
     {Name, Data} = analyze_type_attribute(F),
-    type = edoc_specs:tag(Name),
+    case edoc_specs:tag(Name) of
+	callback -> ok;
+	type -> ok;
+	_ -> erlang:error(invalid_tag, [F])
+    end,
     Attr = {attribute, erl_syntax:get_pos(F), Name, Data},
     Fun = fun(A) ->
                   Line = get_line(A),
@@ -206,11 +210,12 @@ get_name_and_last_line(F) ->
     undefined = put('$max_line', 0),
     _ = erl_parse:map_anno(Fun, Attr),
     Line = erase('$max_line'),
-    TypeName = case Data of
-                   {N, _T, As} when is_atom(N) -> % skip records
-                       {N, length(As)}
-               end,
-    {TypeName, Line}.
+    case Data of
+        _Callback = {NameArity, _} ->
+            {callback, NameArity, Line};
+        _Type = {N, _T, As} when is_atom(N) -> % skip records
+            {type, {N, length(As)}, Line}
+    end.
 
 get_line(Anno) ->
     erl_anno:line(Anno).
@@ -245,8 +250,10 @@ use_tags(#entry{data = Ts}=E, TypeTable) ->
 
 use_tags([], E, _TypeTable, NTs) ->
     E#entry{data = lists:reverse(NTs)};
-use_tags([#tag{origin = code}=T | Ts], E, TypeTable, NTs) ->
+use_tags([#tag{origin = code} = T | Ts], E, TypeTable, NTs) ->
     case tag(T#tag.name) of
+        callback ->
+            use_tags(Ts, E, TypeTable, [T | NTs]);
         spec ->
             Args = params(T, E#entry.args),
             use_tags(Ts, E#entry{args = Args}, TypeTable, [T | NTs]);
@@ -622,6 +629,8 @@ type_name(#tag{name = type,
 analyze_type_attribute(Form) ->
     Name = erl_syntax:atom_value(erl_syntax:attribute_name(Form)),
     case tag(Name) of
+	callback ->
+            erl_syntax_lib:analyze_wild_attribute(Form);
         type ->
             erl_syntax_lib:analyze_wild_attribute(Form);
         _ when Name =:= record ->
@@ -632,8 +641,9 @@ analyze_type_attribute(Form) ->
 %% @doc Return `true' if `Tag' is one of the specification and type
 %% attribute tags recognized by the Erlang compiler.
 
--spec is_tag(Tag::atom()) -> boolean().
+-spec is_tag(Tag :: tag_kind() | term()) -> boolean().
 
+is_tag(callback) -> true;
 is_tag(opaque) -> true;
 is_tag(spec) -> true;
 is_tag(type) -> true;
@@ -641,9 +651,10 @@ is_tag(_) -> false.
 
 %% @doc Return the kind of the attribute tag.
 
--type tag_kind() :: 'type' | 'spec' | 'unknown'.
--spec tag(Tag::atom()) -> tag_kind().
+-type tag_kind() :: 'callback' | 'spec' | 'type'.
+-spec tag(Tag :: atom()) -> tag_kind() | unknown.
 
+tag(callback) -> callback;
 tag(opaque) -> type;
 tag(spec) -> spec;
 tag(type) -> type;

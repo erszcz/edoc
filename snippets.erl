@@ -30,7 +30,7 @@ edoc:files(["src/edoc.erl"], [{doclet, edoc_doclet_chunks}, {dir, "doctest"}, {l
 Chunk = binary_to_term(BChunk).
 
 f().
-edoc:files(["src/edoc.erl"],
+edoc:files(["src/edoc_layout.erl"],
            [{doclet, edoc_doclet_chunks},
             {dir, "/tmp/doctest"},
             {layout, edoc_layout_chunks}]).
@@ -81,9 +81,12 @@ TraceF = fun (Trace, _) ->
          end.
 dbg:tracer(process, {TraceF, ok}).
 dbg:p(all, call).
+%dbg:tpl(edoc_extract, get_callbacks, x).
+dbg:tpl(edoc_extract, get_tags, x).
+%dbg:tpl(edoc_extract, collect, 2, x).
+
 %dbg:tpl(edoc_data, function, x).
-%dbg:tpl(edoc_extract, source, x).
-dbg:tpl(edoc_doclet_chunks, trace_this, x).
+%dbg:tpl(erl_syntax_lib, analyze_form, []).
 
 %dbg:tpl(edoc_layout_chunks, edoc_to_chunk, x).
 %dbg:tpl(edoc_extract, collect, x).

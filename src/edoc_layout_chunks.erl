@@ -130,12 +130,12 @@ type(Doc, Opts) ->
     EntryDoc = doc_contents("./description/fullDescription", Doc, Opts),
     Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
 			      meta_since(Doc, Opts) ++
-			      meta_type_sig(Name, Anno, entries(Opts))),
+			      meta_type_sig(Name, Arity, Anno, entries(Opts))),
     docs_v1_entry(type, Name, Arity, Anno, EntryDoc, Metadata).
 
--spec meta_type_sig(atom(), erl_anno:anno(), [edoc:entry()]) -> Metadata when
+-spec meta_type_sig(atom(), arity(), erl_anno:anno(), [edoc:entry()]) -> Metadata when
       Metadata :: #{signature => erl_parse:abstract_form()}.
-meta_type_sig(Name, Anno, Entries) ->
+meta_type_sig(Name, Arity, Anno, Entries) ->
     Line = erl_anno:line(Anno),
     Tags = edoc_data:get_all_tags(Entries),
     case lists:keyfind(Line, #tag.line, Tags) of
@@ -143,7 +143,8 @@ meta_type_sig(Name, Anno, Entries) ->
 	    TypeTree = T#tag.form,
 	    TypeAttr = erl_syntax:revert(TypeTree),
 	    %% Assert that the lookup by line really gives us the right type attribute:
-	    {attribute, Line, type, {Name, _, _}} = TypeAttr,
+	    {attribute, _, type, {Name, _, Args}} = TypeAttr,
+	    {Name, Arity} = {Name, length(Args)},
 	    [{signature, [TypeAttr]}];
 	_ ->
 	    []
@@ -155,13 +156,31 @@ callbacks(Doc, Opts) ->
 callback(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
-    %% TODO: callback annotations - edoc_data does not get this info from source, but from
-    %% running `M:behaviour_info/1', so there's more work needed to get `-callback' line info.
-    %% `edoc_specs' seems like the place to extract this info and pass on as an Edoc `#tag{}'.
-    Anno = erl_anno:new(0),
-    EntryDoc = none,
-    Metadata = #{},
+    Entries = entries(Opts),
+    Tags = edoc_data:get_all_tags(Entries),
+    {Line, DocContent, Meta} =
+	case lists:filter(select_callback(Name, Arity), Tags) of
+	    [#tag{name = callback, origin = code} = T] ->
+		#tag{line = L, data = {_, D0}, form = F} = T,
+		D1 = case D0 of
+			 none -> none;
+			 _ -> xmerl_to_binary(D0)
+		     end,
+		{L, [D1], [{signature, [F]}]};
+	    _ ->
+		%% TODO: callback placeholders...
+		{0, none, []}
+	end,
+    Anno = erl_anno:new(Line),
+    EntryDoc = doc_content(DocContent, Opts),
+    Metadata = maps:from_list(Meta),
     docs_v1_entry(callback, Name, Arity, Anno, EntryDoc, Metadata).
+
+select_callback(Name, Arity) ->
+    fun (#tag{name = callback, data = {{N, A}, _}})
+	  when N =:= Name, A =:= Arity -> true;
+	(_) -> false
+    end.
 
 functions(Doc, Opts) ->
     [function(F, Opts) || F <- xmerl_xpath:string("//module/functions/function", Doc)].
@@ -232,10 +251,13 @@ xpath_to_text(XPath, Doc, Opts) ->
 	    {_ , Value} = format_attribute(Attr),
 	    hd(shell_docs:normalize([Value]));
 	[#xmlElement{}] = Elements ->
-	    iolist_to_binary(chunk_to_text(xmerl_to_chunk(Elements)));
+	    xmerl_to_binary(Elements);
 	[_|_] ->
 	    erlang:error(multiple_nodes, [XPath, Doc, Opts])
     end.
+
+xmerl_to_binary(XML) ->
+    iolist_to_binary(chunk_to_text(xmerl_to_chunk(XML))).
 
 chunk_to_text([]) -> [];
 chunk_to_text([Node | Nodes]) ->
