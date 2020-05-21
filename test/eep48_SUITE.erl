@@ -61,11 +61,12 @@ test_metadata(Config) ->
     PrivDir = ?config(priv_dir, Config),
     {ok, Chunk} = get_doc_chunk(DataDir, PrivDir, eep48_SUITE_fixtures),
     Docs = Chunk#docs_v1.docs,
+    %?debugVal(Docs, 1000),
     %% WHEN / THEN
-    Meta1 = get_metadata(hd(lookup_function(deprecated_example, 0, Docs))),
-    ?assert(is_binary(maps:get(deprecated, Meta1))),
-    Meta2 = get_metadata(hd(lookup_function(since_example, 0, Docs))),
-    ?assert(is_binary(maps:get(since, Meta2))).
+    Meta1 = get_metadata(hd(lookup_function(since_f, 0, Docs))),
+    ?assert(is_binary(maps:get(since, Meta1))),
+    Meta2 = get_metadata(hd(lookup_function(deprecated_f, 0, Docs))),
+    ?assert(is_binary(maps:get(deprecated, Meta2))).
 
 %%
 %% Helpers
