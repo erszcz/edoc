@@ -12,7 +12,12 @@
 
 %% Test cases
 -export([edoc_app_should_pass_shell_docs_validation/1,
-	 test_metadata/1]).
+	 function_since_tag/1,
+	 function_deprecated_tag/1,
+	 type_since_tag/1,
+	 type_deprecated_tag/1,
+	 cb_since_tag/1,
+	 cb_deprecated_tag/1]).
 
 %%
 %% CT preamble
@@ -21,7 +26,17 @@
 suite() -> [].
 
 all() -> [edoc_app_should_pass_shell_docs_validation,
-	  test_metadata].
+	  function_since_tag,
+	  function_deprecated_tag,
+	  type_since_tag,
+	  type_deprecated_tag,
+	  cb_since_tag,
+	  cb_deprecated_tag].
+
+not_supported() -> [type_since_tag,
+		    type_deprecated_tag,
+		    cb_since_tag,
+		    cb_deprecated_tag].
 
 groups() -> [].
 
@@ -35,7 +50,13 @@ init_per_testcase(edoc_app_should_pass_shell_docs_validation = _CaseName, Config
     {ok, #{ebin := EbinDir} = CopyInfo} = copy_application(edoc, ?config(priv_dir, Config)),
     true = code:add_patha(EbinDir),
     [{edoc_copy, CopyInfo} | Config];
-init_per_testcase(_CaseName, Config) -> Config.
+init_per_testcase(CaseName, Config) ->
+    case lists:member(CaseName, not_supported()) of
+	true ->
+	    {skip, "not supported"};
+	false ->
+	    Config
+    end.
 
 end_per_testcase(edoc_app_should_pass_shell_docs_validation = _CaseName, Config) ->
     #{ebin := EbinDir} = ?config(edoc_copy, Config),
@@ -55,22 +76,62 @@ edoc_app_should_pass_shell_docs_validation(Config) ->
     {ok, Modules} = application:get_key(edoc, modules),
     [ shell_docs:validate(M) || M <- Modules ].
 
-test_metadata(Config) ->
-    %% GIVEN
-    DataDir = ?config(data_dir, Config),
-    PrivDir = ?config(priv_dir, Config),
-    {ok, Chunk} = get_doc_chunk(DataDir, PrivDir, eep48_SUITE_fixtures),
-    Docs = Chunk#docs_v1.docs,
+function_since_tag(Config) ->
+    Docs = get_docs(Config, eep48_SUITE_fixtures),
     %?debugVal(Docs, 1000),
-    %% WHEN / THEN
-    Meta1 = get_metadata(hd(lookup_function(since_f, 0, Docs))),
-    ?assert(is_binary(maps:get(since, Meta1))),
-    Meta2 = get_metadata(hd(lookup_function(deprecated_f, 0, Docs))),
-    ?assert(is_binary(maps:get(deprecated, Meta2))).
+    ?assertEqual(<<"0.1.0">>, get_function_meta_field(since, fun_with_since_tag, 0, Docs) ).
+
+function_deprecated_tag(Config) ->
+    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    %?debugVal(Docs, 1000),
+    ?assertEqual(<<"Deprecated function.">>,
+		 get_function_meta_field(deprecated, fun_with_deprecated_tag, 0, Docs) ).
+
+type_since_tag(Config) ->
+    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    %?debugVal(Docs, 1000),
+    ?assertEqual(<<"0.1.0">>, get_type_meta_field(since, type_with_since_tag, 0, Docs) ).
+
+type_deprecated_tag(Config) ->
+    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    %?debugVal(Docs, 1000),
+    ?assertEqual(<<"Deprecated type.">>,
+		 get_type_meta_field(deprecated, type_with_deprecated_tag, 0, Docs) ).
+
+cb_since_tag(Config) ->
+    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    %?debugVal(Docs, 1000),
+    ?assertEqual(<<"0.1.0">>,
+		 get_type_meta_field(since, cb_with_since_tag, 0, Docs) ).
+
+cb_deprecated_tag(Config) ->
+    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    ?debugVal(Docs, 1000),
+    ?assertEqual(<<"Deprecated callback.">>,
+		 get_type_meta_field(deprecated, cb_with_deprecated_tag, 0, Docs) ).
 
 %%
 %% Helpers
 %%
+
+get_docs(Config, M) ->
+    DataDir = ?config(data_dir, Config),
+    PrivDir = ?config(priv_dir, Config),
+    {ok, Chunk} = get_doc_chunk(DataDir, PrivDir, M),
+    Chunk#docs_v1.docs.
+
+get_function_meta_field(Field, F, A, Docs) ->
+    get_meta_field(Field, function, F, A, Docs).
+
+get_type_meta_field(Field, T, A, Docs) ->
+    get_meta_field(Field, type, T, A, Docs).
+
+get_callback_meta_field(Field, Cb, A, Docs) ->
+    get_meta_field(Field, callback, Cb, A, Docs).
+
+get_meta_field(Field, Kind, Name, Arity, Docs) ->
+    Meta = get_metadata(lookup_entry(Kind, Name, Arity, Docs)),
+    maps:get(Field, Meta).
 
 get_doc_chunk(DataDir, PrivDir, Mod) ->
     TagsErl = filename:join([DataDir, atom_to_list(Mod) ++ ".erl"]),
@@ -82,15 +143,20 @@ get_doc_chunk(DataDir, PrivDir, Mod) ->
     Chunk = binary_to_term(BChunk),
     {ok, Chunk}.
 
-%% Based on shell_docs:get_doc/3.
-lookup_function(Function, Arity, Docs) ->
-    FnFunctions =
-	lists:filter(fun({{function, F, A},_Anno,_Sig,_Doc,_Meta}) ->
-			     F =:= Function andalso A =:= Arity;
-			(_) ->
-			     false
-		     end, Docs),
-    [{F, A, S, D, M} || {F,A,S,D,M} <- FnFunctions].
+lookup_function(F, A, Docs) -> lookup_entry(function, F, A, Docs).
+
+lookup_type(T, A, Docs) -> lookup_entry(type, T, A, Docs).
+
+lookup_callback(Cb, A, Docs) -> lookup_entry(callback, Cb, A, Docs).
+
+lookup_entry(Kind, Function, Arity, Docs) ->
+    [Entry] = lists:filter(fun({{K, F, A},_Anno,_Sig,_Doc,_Meta})
+				 when K =:= Kind andalso F =:= Function, A =:= Arity ->
+				   true;
+			      (_) ->
+				   false
+			   end, Docs),
+    Entry.
 
 get_metadata({_, _, _, _, Metadata}) -> Metadata.
 
@@ -106,12 +172,12 @@ copy_application(App, TargetDir) ->
     ok = file:make_dir(EbinDir),
     ok = file:make_dir(IncludeDir),
     ok = file:make_dir(SrcDir),
-    copy_app_dir(ebin, EbinDir),
-    copy_app_dir(include, IncludeDir),
-    copy_app_dir(src, SrcDir),
+    copy_app_dir(App, ebin, EbinDir),
+    copy_app_dir(App, include, IncludeDir),
+    copy_app_dir(App, src, SrcDir),
     {ok, #{ebin => EbinDir, doc => DocDir, src => SrcDir}}.
 
-copy_app_dir(Dir, TargetDir) ->
+copy_app_dir(App, Dir, TargetDir) ->
     {ok, Files} = file:list_dir(code:lib_dir(App, Dir)),
     lists:foreach(fun (F) ->
 			  file:copy(filename:join(code:lib_dir(App, Dir), F),

@@ -1,11 +1,11 @@
 -module(eep48_SUITE_fixtures).
 
 -export([f/0,
-	 deprecated_f/0,
-	 since_f/0]).
+	 fun_with_deprecated_tag/0,
+	 fun_with_since_tag/0]).
 
--export_type([deprecated_t/0,
-	      since_t/0]).
+-export_type([type_with_deprecated_tag/0,
+	      type_with_since_tag/0]).
 
 %% TODO: Putting @deprecated on consecutive -type and -callback raises an error
 %%	 when EDoc processes the following function.
@@ -17,23 +17,23 @@
 %% TODO: Interestingly, the same does NOT happen for the @since tag,
 %%	 which seems to be processed in the same way.
 
--type deprecated_t() :: ok.
+-type type_with_deprecated_tag() :: ok.
 %% %% @deprecated This type is deprecated.
 
--type since_t() :: ok.
+-type type_with_since_tag() :: ok.
 %% @since 0.1.0
 
--callback deprecated_cb() -> ok.
+-callback cb_with_deprecated_tag() -> ok.
 %% %% @deprecated This callback is deprecated.
 
--callback since_cb() -> ok.
+-callback cb_with_since_tag() -> ok.
 %% @since 0.1.0
 
-%% @deprecated See {@link file/2} for details.
-deprecated_f() -> ok.
+%% @deprecated Deprecated function.
+fun_with_deprecated_tag() -> ok.
 
 %% @since 0.1.0
-since_f() -> ok.
+fun_with_since_tag() -> ok.
 
 f() -> ok.
 
