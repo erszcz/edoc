@@ -97,28 +97,23 @@ get_metadata({_, _, _, _, Metadata}) -> Metadata.
 copy_application(App, undefined) ->
     ct:fail("~s: target dir undefined", [?FUNCTION_NAME]);
 copy_application(App, TargetDir) ->
+    DocDir	= filename:join([TargetDir, App, "doc"]),
+    EbinDir	= filename:join([TargetDir, App, "ebin"]),
+    IncludeDir	= filename:join([TargetDir, App, "include"]),
+    SrcDir	= filename:join([TargetDir, App, "src"]),
     ok = file:make_dir(filename:join([TargetDir, App])),
-    DocDir = filename:join([TargetDir, App, "doc"]),
     ok = file:make_dir(DocDir),
-    EbinDir = filename:join([TargetDir, App, "ebin"]),
     ok = file:make_dir(EbinDir),
-    IncludeDir = filename:join([TargetDir, App, "include"]),
     ok = file:make_dir(IncludeDir),
-    SrcDir = filename:join([TargetDir, App, "src"]),
     ok = file:make_dir(SrcDir),
-    {ok, EbinFiles} = file:list_dir(code:lib_dir(App, ebin)),
-    lists:foreach(fun (F) ->
-			  file:copy(filename:join(code:lib_dir(App, ebin), F),
-				    filename:join(EbinDir, F))
-		  end, EbinFiles),
-    {ok, IncludeFiles} = file:list_dir(code:lib_dir(App, include)),
-    lists:foreach(fun (F) ->
-			  file:copy(filename:join(code:lib_dir(App, include), F),
-				    filename:join(IncludeDir, F))
-		  end, IncludeFiles),
-    {ok, SrcFiles} = file:list_dir(code:lib_dir(App, src)),
-    lists:foreach(fun (F) ->
-			  file:copy(filename:join(code:lib_dir(App, src), F),
-				    filename:join(SrcDir, F))
-		  end, SrcFiles),
+    copy_app_dir(ebin, EbinDir),
+    copy_app_dir(include, IncludeDir),
+    copy_app_dir(src, SrcDir),
     {ok, #{ebin => EbinDir, doc => DocDir, src => SrcDir}}.
+
+copy_app_dir(Dir, TargetDir) ->
+    {ok, Files} = file:list_dir(code:lib_dir(App, Dir)),
+    lists:foreach(fun (F) ->
+			  file:copy(filename:join(code:lib_dir(App, Dir), F),
+				    filename:join(TargetDir, F))
+		  end, Files).
