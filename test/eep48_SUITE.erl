@@ -102,13 +102,13 @@ cb_since_tag(Config) ->
     Docs = get_docs(Config, eep48_meta),
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"0.1.0">>,
-		 get_type_meta_field(since, cb_with_since_tag, 0, Docs) ).
+		 get_callback_meta_field(since, cb_with_since_tag, 0, Docs) ).
 
 cb_deprecated_tag(Config) ->
     Docs = get_docs(Config, eep48_meta),
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"Deprecated callback.">>,
-		 get_type_meta_field(deprecated, cb_with_deprecated_tag, 0, Docs) ).
+		 get_callback_meta_field(deprecated, cb_with_deprecated_tag, 0, Docs) ).
 
 %%
 %% Helpers
