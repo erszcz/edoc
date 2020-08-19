@@ -17,7 +17,8 @@
 	 type_since_tag/1,
 	 type_deprecated_tag/1,
 	 cb_since_tag/1,
-	 cb_deprecated_tag/1]).
+	 cb_deprecated_tag/1,
+	 links/1]).
 
 %%
 %% CT preamble
@@ -31,13 +32,15 @@ all() -> [edoc_app_should_pass_shell_docs_validation,
 	  type_since_tag,
 	  type_deprecated_tag,
 	  cb_since_tag,
-	  cb_deprecated_tag].
+	  cb_deprecated_tag,
+	  links].
 
 %% TODO: remove these cases once EDoc supports extracting the relevant tags
 not_supported() -> [type_since_tag,
 		    type_deprecated_tag,
 		    cb_since_tag,
-		    cb_deprecated_tag].
+		    cb_deprecated_tag,
+		    links].
 
 groups() -> [].
 
@@ -110,6 +113,11 @@ cb_deprecated_tag(Config) ->
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"Deprecated callback.">>,
 		 get_callback_meta_field(deprecated, cb_with_deprecated_tag, 0, Docs) ).
+
+links(Config) ->
+    Docs = get_docs(Config, eep48_links),
+    ?debugVal(Docs, 1000),
+    ct:fail(not_done_yet).
 
 %%
 %% Helpers
