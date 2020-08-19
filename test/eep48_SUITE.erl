@@ -77,36 +77,36 @@ edoc_app_should_pass_shell_docs_validation(Config) ->
     [ shell_docs:validate(M) || M <- Modules ].
 
 function_since_tag(Config) ->
-    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    Docs = get_docs(Config, eep48_meta),
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"0.1.0">>, get_function_meta_field(since, fun_with_since_tag, 0, Docs) ).
 
 function_deprecated_tag(Config) ->
-    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    Docs = get_docs(Config, eep48_meta),
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"Deprecated function.">>,
 		 get_function_meta_field(deprecated, fun_with_deprecated_tag, 0, Docs) ).
 
 type_since_tag(Config) ->
-    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    Docs = get_docs(Config, eep48_meta),
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"0.1.0">>, get_type_meta_field(since, type_with_since_tag, 0, Docs) ).
 
 type_deprecated_tag(Config) ->
-    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    Docs = get_docs(Config, eep48_meta),
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"Deprecated type.">>,
 		 get_type_meta_field(deprecated, type_with_deprecated_tag, 0, Docs) ).
 
 cb_since_tag(Config) ->
-    Docs = get_docs(Config, eep48_SUITE_fixtures),
+    Docs = get_docs(Config, eep48_meta),
     %?debugVal(Docs, 1000),
     ?assertEqual(<<"0.1.0">>,
 		 get_type_meta_field(since, cb_with_since_tag, 0, Docs) ).
 
 cb_deprecated_tag(Config) ->
-    Docs = get_docs(Config, eep48_SUITE_fixtures),
-    ?debugVal(Docs, 1000),
+    Docs = get_docs(Config, eep48_meta),
+    %?debugVal(Docs, 1000),
     ?assertEqual(<<"Deprecated callback.">>,
 		 get_type_meta_field(deprecated, cb_with_deprecated_tag, 0, Docs) ).
 
