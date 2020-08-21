@@ -39,8 +39,7 @@ all() -> [edoc_app_should_pass_shell_docs_validation,
 not_supported() -> [type_since_tag,
 		    type_deprecated_tag,
 		    cb_since_tag,
-		    cb_deprecated_tag,
-		    links].
+		    cb_deprecated_tag].
 
 groups() -> [].
 
@@ -116,8 +115,15 @@ cb_deprecated_tag(Config) ->
 
 links(Config) ->
     Docs = get_docs(Config, eep48_links),
-    ?debugVal(Docs, 1000),
-    ct:fail(not_done_yet).
+    %?debugVal(Docs, 1000),
+    ?assertEqual(<<"seeerl">>, get_doc_link_rel({function, module_link, 0}, Docs)),
+    ?assertEqual(<<"seeapp">>, get_doc_link_rel({function, app_link, 0}, Docs)),
+    ?assertEqual(<<"seeerl">>, get_doc_link_rel({function, app_module_link, 0}, Docs)),
+    ?assertEqual(<<"seemfa">>, get_doc_link_rel({function, app_mfa_link, 0}, Docs)),
+    ?assertEqual(<<"seemfa">>, get_doc_link_rel({function, external_function_link, 0}, Docs)),
+    ?assertEqual(<<"seemfa">>, get_doc_link_rel({function, local_function_link, 0}, Docs)),
+    ?assertEqual(<<"seetype">>, get_doc_link_rel({function, local_type_link, 0}, Docs)),
+    ?assertEqual(<<"seetype">>, get_doc_link_rel({function, external_type_link, 0}, Docs)).
 
 %%
 %% Helpers
@@ -169,6 +175,18 @@ lookup_entry(Kind, Function, Arity, Docs) ->
 
 get_metadata({_, _, _, _, Metadata}) -> Metadata.
 
+get_doc_link_rel(KNA, Docs) ->
+    [Link] = [ Node || {a, _, _} = Node <- get_doc(KNA, Docs) ],
+    {a, Attrs, _} = Link,
+    case lists:keyfind(rel, 1, Attrs) of
+	false -> erlang:error({not_found, rel, Link});
+	{rel, Rel} -> Rel
+    end.
+
+get_doc({K, N, A}, Docs) ->
+    Entry = docs_v1_entry(lookup_entry(K, N, A, Docs)),
+    maps:get(<<"en">>, Entry#docs_v1_entry.doc).
+
 copy_application(App, undefined) ->
     ct:fail("~s: target dir undefined", [?FUNCTION_NAME]);
 copy_application(App, TargetDir) ->
@@ -192,3 +210,10 @@ copy_app_dir(App, Dir, TargetDir) ->
 			  file:copy(filename:join(code:lib_dir(App, Dir), F),
 				    filename:join(TargetDir, F))
 		  end, Files).
+
+docs_v1_entry({KNA, Anno, Sig, Doc, Meta}) ->
+    #docs_v1_entry{kind_name_arity = KNA,
+		   anno = Anno,
+		   signature = Sig,
+		   doc = Doc,
+		   metadata = Meta}.

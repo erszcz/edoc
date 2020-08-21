@@ -34,7 +34,7 @@
 
 -export([app/1, app/2, module/1, module/2, module/3,
 	 function/2, function/3, function/4, type/1, type/2, type/3,
-	 to_string/1, to_label/1, get_uri/2, is_top/2]).
+	 to_string/1, to_label/1, get_rel_uri/2, get_uri/2, is_top/2]).
 
 -import(edoc_lib, [join_uri/2, escape_uri/1]).
 
@@ -101,6 +101,21 @@ to_label({function, F, A}) ->
     escape_uri(atom_to_list(F)) ++ "-" ++ integer_to_list(A);
 to_label({type, T}) ->
     "type-" ++ escape_uri(atom_to_list(T)).
+
+get_rel_uri({app, _} = Ref, Env) ->
+    {seeapp, get_uri(Ref, Env)};
+get_rel_uri({app, _, InnerRef} = Ref, Env) ->
+    {Rel, _} = get_rel_uri(InnerRef, Env),
+    {Rel, get_uri(Ref, Env)};
+get_rel_uri({module, _, InnerRef} = Ref, Env) ->
+    {Rel, _} = get_rel_uri(InnerRef, Env),
+    {Rel, get_uri(Ref, Env)};
+get_rel_uri({module, _} = Ref, Env) ->
+    {seeerl, get_uri(Ref, Env)};
+get_rel_uri({function, _, _} = Ref, Env) ->
+    {seemfa, get_uri(Ref, Env)};
+get_rel_uri({type, _} = Ref, Env) ->
+    {seetype, get_uri(Ref, Env)}.
 
 get_uri({app, App}, Env) ->
     join_uri(app_ref(App, Env), ?INDEX_FILE);
