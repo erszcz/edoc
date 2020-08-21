@@ -99,3 +99,16 @@ dbg:tpl(edoc_extract, get_tags, x).
 
 %% From an EDoc #entry{} list `Entries` to a pretty printed spec:
 erlang:iolist_to_binary( erl_pp:form(erl_syntax:revert((hd((lists:keyfind({read,1}, #entry.name, Entries))#entry.data))#tag.form)) ).
+
+f().
+dbg:stop_clear().
+rr(edoc_extract).
+rr(xmerl_lib).
+rr(erl_syntax).
+TraceF = fun (Trace, _) ->
+                 rp([calendar:now_to_local_time(os:timestamp()), Trace])
+         end.
+dbg:tracer(process, {TraceF, ok}).
+dbg:p(all, call).
+dbg:tpl(edoc_parser, parse_ref, x).
+dbg:tpl(edoc_refs, get_uri, x).
