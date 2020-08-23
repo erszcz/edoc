@@ -71,7 +71,7 @@ end_per_testcase(_CaseName, Config) -> Config.
 %% Tests
 %%
 
-edoc_app_should_pass_shell_docs_validation(Config) ->
+edoc_app_should_pass_shell_docs_validation(_Config) ->
     ok = edoc:application(edoc, [{doclet, edoc_doclet_chunks},
 				 {layout, edoc_layout_chunks},
 				 private, hidden]),
@@ -187,7 +187,7 @@ get_doc({K, N, A}, Docs) ->
     Entry = docs_v1_entry(lookup_entry(K, N, A, Docs)),
     maps:get(<<"en">>, Entry#docs_v1_entry.doc).
 
-copy_application(App, undefined) ->
+copy_application(_App, undefined) ->
     ct:fail("~s: target dir undefined", [?FUNCTION_NAME]);
 copy_application(App, TargetDir) ->
     DocDir	= filename:join([TargetDir, App, "doc"]),
