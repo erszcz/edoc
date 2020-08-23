@@ -81,7 +81,8 @@ version_macro(S, Line, Env) ->
 link_macro(S, Line, Env) ->
     {S1, S2} = edoc_lib:split_at_stop(S),
     Ref = edoc_parser:parse_ref(S1, Line),
-    {Rel, URI} = edoc_refs:get_rel_uri(Ref, Env),
+    {DocgenRel, DocgenURI} = edoc_refs:get_docgen_link(Ref),
+    URI = edoc_refs:get_uri(Ref, Env),
     Txt = if S2 =:= [] -> "<code>" ++ S1 ++ "</code>";
 	     true -> S2
 	  end,
@@ -89,8 +90,8 @@ link_macro(S, Line, Env) ->
 		 true -> " target=\"_top\""; % note the initial space
 		 false -> ""
 	     end,
-    lists:flatten(io_lib:fwrite("<a rel=\"~ts\" href=\"~ts\"~ts>~ts</a>",
-				[Rel, URI, Target, Txt])).
+    lists:flatten(io_lib:fwrite("<a docgen-rel=\"~ts\" docgen-href=\"~ts\" href=\"~ts\"~ts>~ts</a>",
+				[DocgenRel, DocgenURI, URI, Target, Txt])).
 
 section_macro(S, _Line, _Env) ->
     S1 = lists:reverse(edoc_lib:strip_space(

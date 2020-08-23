@@ -116,14 +116,22 @@ cb_deprecated_tag(Config) ->
 links(Config) ->
     Docs = get_docs(Config, eep48_links),
     %?debugVal(Docs, 1000),
-    ?assertEqual(<<"seeerl">>, get_doc_link_rel({function, module_link, 0}, Docs)),
-    ?assertEqual(<<"seeapp">>, get_doc_link_rel({function, app_link, 0}, Docs)),
-    ?assertEqual(<<"seeerl">>, get_doc_link_rel({function, app_module_link, 0}, Docs)),
-    ?assertEqual(<<"seemfa">>, get_doc_link_rel({function, app_mfa_link, 0}, Docs)),
-    ?assertEqual(<<"seemfa">>, get_doc_link_rel({function, external_function_link, 0}, Docs)),
-    ?assertEqual(<<"seemfa">>, get_doc_link_rel({function, local_function_link, 0}, Docs)),
-    ?assertEqual(<<"seetype">>, get_doc_link_rel({function, local_type_link, 0}, Docs)),
-    ?assertEqual(<<"seetype">>, get_doc_link_rel({function, external_type_link, 0}, Docs)).
+    ?assertEqual({<<"seeerl">>, <<"eep48_links">>},
+		 get_doc_link({function, module_link, 0}, Docs)),
+    ?assertEqual({<<"seeapp">>, <<"edoc:index">>},
+		 get_doc_link({function, app_link, 0}, Docs)),
+    ?assertEqual({<<"seeerl">>, <<"edoc:edoc_doclet">>},
+		 get_doc_link({function, app_module_link, 0}, Docs)),
+    ?assertEqual({<<"seemfa">>, <<"edoc:edoc#files/2">>},
+		 get_doc_link({function, app_mfa_link, 0}, Docs)),
+    ?assertEqual({<<"seemfa">>, <<"eep48_SUITE#suite/0">>},
+		 get_doc_link({function, external_function_link, 0}, Docs)),
+    ?assertEqual({<<"seemfa">>, <<"#f/0">>},
+		 get_doc_link({function, local_function_link, 0}, Docs)),
+    ?assertEqual({<<"seetype">>, <<"#t/0">>},
+		 get_doc_link({function, local_type_link, 0}, Docs)),
+    ?assertEqual({<<"seetype">>, <<"eep48_links#t/0">>},
+		 get_doc_link({function, external_type_link, 0}, Docs)).
 
 %%
 %% Helpers
@@ -175,12 +183,15 @@ lookup_entry(Kind, Function, Arity, Docs) ->
 
 get_metadata({_, _, _, _, Metadata}) -> Metadata.
 
-get_doc_link_rel(KNA, Docs) ->
+get_doc_link(KNA, Docs) ->
     [Link] = [ Node || {a, _, _} = Node <- get_doc(KNA, Docs) ],
     {a, Attrs, _} = Link,
-    case lists:keyfind(rel, 1, Attrs) of
-	false -> erlang:error({not_found, rel, Link});
-	{rel, Rel} -> Rel
+    {fetch('docgen-rel', Attrs), fetch('docgen-href', Attrs)}.
+
+fetch(K, List) ->
+    case lists:keyfind(K, 1, List) of
+	false -> erlang:error({not_found, K, List});
+	{K, V} -> V
     end.
 
 get_doc({K, N, A}, Docs) ->
