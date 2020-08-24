@@ -186,7 +186,8 @@ get_metadata({_, _, _, _, Metadata}) -> Metadata.
 get_doc_link(KNA, Docs) ->
     [Link] = [ Node || {a, _, _} = Node <- get_doc(KNA, Docs) ],
     {a, Attrs, _} = Link,
-    {fetch('docgen-rel', Attrs), fetch('docgen-href', Attrs)}.
+    <<"https://erlang.org/doc/link/", ShortRel/bytes>> = fetch(rel, Attrs),
+    {ShortRel, fetch(href, Attrs)}.
 
 fetch(K, List) ->
     case lists:keyfind(K, 1, List) of

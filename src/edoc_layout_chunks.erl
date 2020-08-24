@@ -301,7 +301,12 @@ format_content_(#xmlText{} = T) ->
 	false -> [unicode:characters_to_binary(Text)]
     end;
 
+format_content_(#xmlElement{name = a} = E) ->
+    format_element(rewrite_docgen_link(E));
 format_content_(#xmlElement{} = E) ->
+    format_element(E).
+
+format_element(#xmlElement{} = E) ->
     #xmlElement{name = Name, content = Content, attributes = Attributes} = E,
     case {is_edoc_tag(Name), is_html_tag(Name)} of
 	{true, _} ->
@@ -338,5 +343,29 @@ is_html_tag(Tag) ->
     %% Compare with https://developer.mozilla.org/en-US/docs/Web/HTML/Element
     Tags = [a,p,h1,h2,h3,i,br,em,pre,code,ul,ol,li,dl,dt,dd],
     lists:member(Tag, Tags).
+
+rewrite_docgen_link(#xmlElement{name = a} = E) ->
+    {a, Attrs0, SubEls} = SimpleE = xmerl_lib:simplify_element(E),
+    Attrs = maps:from_list(Attrs0),
+    case {maps:get('docgen-rel', Attrs, false), maps:get('docgen-href', Attrs, false)} of
+	{false, false} -> E;
+	{false, _} -> inconsistent_docgen_attrs(Attrs);
+	{_, false} -> inconsistent_docgen_attrs(Attrs);
+	{ShortRel, URI} ->
+	    AttrsNoDocgen = maps:without(['docgen-rel', 'docgen-href'], Attrs),
+	    NewAttrs = AttrsNoDocgen#{rel => expand_docgen_rel(ShortRel),
+				      href => URI},
+	    xmerl_lib:normalize_element({a, maps:to_list(NewAttrs), SubEls})
+    end.
+
+inconsistent_docgen_attrs(Attrs) ->
+    %% Only one of `docgen-rel` and `docgen-href` is found - should not happen!
+    erlang:error({inconsistent_docgen_attrs, Attrs}).
+
+-spec expand_docgen_rel(edoc_refs:docgen_rel()) -> string().
+expand_docgen_rel(Rel)
+  when Rel =:= "seemfa"; Rel =:= "seeerl"; Rel =:= "seetype"; Rel =:= "seeapp";
+       Rel =:= "seecom"; Rel =:= "seecref"; Rel =:= "seefile" ; Rel =:= "seeguide" ->
+    "https://erlang.org/doc/link/" ++ Rel.
 
 %%. vim: foldmethod=marker foldmarker=%%',%%.
