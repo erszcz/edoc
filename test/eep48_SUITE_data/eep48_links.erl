@@ -13,6 +13,15 @@
 	 local_type_link/0,
 	 external_type_link/0]).
 
+-export([see_module/0,
+	 see_app/0,
+	 see_app_module/0,
+	 see_app_mfa/0,
+	 see_external_function/0,
+	 see_local_function/0,
+	 see_local_type/0,
+	 see_external_type/0]).
+
 -export_type([t/0]).
 
 -type t() :: {}.
@@ -50,3 +59,28 @@ local_type_link() -> ok.
 %% @doc External type link {@link eep48_links:t()}.
 %% Should map to `seetype'.
 external_type_link() -> ok.
+
+%% @see eep48_links. Should map to `seeerl'.
+see_module() -> ok.
+
+%% @see //edoc. Should map to `seeapp'.
+see_app() -> ok.
+
+%% @see //edoc/edoc_doclet. Should map to `seeerl'.
+see_app_module() -> ok.
+
+%% @doc Should map to `seemfa'.
+%% @see //edoc/edoc:files/2.
+see_app_mfa() -> ok.
+
+%% @see eep48_SUITE:suite/0. Should map to `seemfa'.
+see_external_function() -> ok.
+
+%% @see f/0. Should map to `seemfa'.
+see_local_function() -> ok.
+
+%% @see t(). Should map to `seetype'.
+see_local_type() -> ok.
+
+%% @see eep48_links:t(). Should map to `seetype'.
+see_external_type() -> ok.
