@@ -91,6 +91,13 @@ edoc_to_chunk(Doc, Opts) ->
       Doc :: edoc:xmerl_module(),
       Opts :: proplists:proplist().
 doc_contents(XPath, Doc, Opts) ->
+    case doc_visibility(XPath, Doc, Opts) of
+	hidden -> hidden;
+	none -> none;
+	regular -> doc_contents_(XPath, Doc, Opts)
+    end.
+
+doc_visibility(XPath, Doc, Opts) ->
     case {xpath_to_text("./@private", Doc, Opts),
 	  xpath_to_text("./@hidden", Doc, Opts)}
     of
@@ -101,9 +108,14 @@ doc_contents(XPath, Doc, Opts) ->
 	    %% EDoc `@hidden' is EEP-48 `none'
 	    none;
 	_ ->
-	    doc_content(xpath_to_chunk(XPath, Doc), Opts)
+	    regular
     end.
 
+doc_contents_(XPath, Doc, Opts) ->
+    Equiv = xpath_to_chunk("./equiv", Doc),
+    Desc = xpath_to_chunk("./description/fullDescription", Doc),
+    See = xpath_to_chunk("./see", Doc),
+    doc_content(Equiv ++ Desc ++ See, Opts).
 
 meta_deprecated(Doc, Opts) ->
     Deprecated = xpath_to_text("./deprecated/description/fullDescription", Doc, Opts),
@@ -189,17 +201,13 @@ function(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
     Anno = anno(Doc, Opts),
-    EntryDoc =
-	case xmerl_xpath:string("./equiv", Doc) of
-	    [Equiv] ->
-		%% TODO: use new link syntax here
-		Expr = xpath_to_text("./expr", Equiv, Opts),
-		See = xpath_to_text("./see", Equiv, Opts),
-		Content = [iolist_to_binary(["Equivalent to ", "[", Expr, "](`", See, "`)."])],
-		doc_content(Content, Opts);
-	    [] ->
-		doc_contents("./description/fullDescription", Doc, Opts)
-	end,
+    %% TODO: cope with equiv, see, description:
+    %% - get equiv
+    %% - get see
+    %% - get description
+    %% - merge together
+    %% - output with doc_content(Content, Opts)
+    EntryDoc = doc_contents("./", Doc, Opts),
     Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
 			      meta_since(Doc, Opts) ++
 			      meta_function_sig({Name, Arity}, entries(Opts))),
@@ -301,8 +309,12 @@ format_content_(#xmlText{} = T) ->
 	false -> [unicode:characters_to_binary(Text)]
     end;
 
+format_content_(#xmlElement{name = equiv} = E) ->
+    format_element(rewrite_equiv_tag(E));
 format_content_(#xmlElement{name = a} = E) ->
-    format_element(rewrite_docgen_link(E));
+    format_element(rewrite_a_tag(E));
+format_content_(#xmlElement{name = see} = E) ->
+    format_element(rewrite_see_tag(E));
 format_content_(#xmlElement{} = E) ->
     format_element(E).
 
@@ -344,9 +356,16 @@ is_html_tag(Tag) ->
     Tags = [a,p,h1,h2,h3,i,br,em,pre,code,ul,ol,li,dl,dt,dd],
     lists:member(Tag, Tags).
 
-rewrite_docgen_link(#xmlElement{name = a} = E) ->
-    {a, Attrs0, SubEls} = SimpleE = xmerl_lib:simplify_element(E),
-    Attrs = maps:from_list(Attrs0),
+rewrite_a_tag(#xmlElement{name = a} = E) ->
+    SimpleE = xmerl_lib:simplify_element(E),
+    xmerl_lib:normalize_element(rewrite_docgen_link(SimpleE)).
+
+rewrite_see_tag(#xmlElement{name = see} = E) ->
+    SeeTag = xmerl_lib:simplify_element(E),
+    xmerl_lib:normalize_element(rewrite_docgen_link(SeeTag)).
+
+rewrite_docgen_link({Tag, AttrL, SubEls} = E) when Tag =:= a; Tag =:= see ->
+    Attrs = maps:from_list(AttrL),
     case {maps:get('docgen-rel', Attrs, false), maps:get('docgen-href', Attrs, false)} of
 	{false, false} -> E;
 	{false, _} -> inconsistent_docgen_attrs(Attrs);
@@ -355,7 +374,7 @@ rewrite_docgen_link(#xmlElement{name = a} = E) ->
 	    AttrsNoDocgen = maps:without(['docgen-rel', 'docgen-href'], Attrs),
 	    NewAttrs = AttrsNoDocgen#{rel => expand_docgen_rel(ShortRel),
 				      href => URI},
-	    xmerl_lib:normalize_element({a, maps:to_list(NewAttrs), SubEls})
+	    {Tag, [{'orig-tag', Tag}] ++ maps:to_list(NewAttrs), SubEls}
     end.
 
 inconsistent_docgen_attrs(Attrs) ->
@@ -367,5 +386,15 @@ expand_docgen_rel(Rel)
   when Rel =:= "seemfa"; Rel =:= "seeerl"; Rel =:= "seetype"; Rel =:= "seeapp";
        Rel =:= "seecom"; Rel =:= "seecref"; Rel =:= "seefile" ; Rel =:= "seeguide" ->
     "https://erlang.org/doc/link/" ++ Rel.
+
+rewrite_equiv_tag(#xmlElement{name = equiv} = E) ->
+    NewE = case xmerl_lib:simplify_element(E) of
+	       {equiv, [], [{expr, [], Expr}]} ->
+		   {p, [], ["Equivalent to ", Expr, "."]};
+	       {equiv, [], [{expr, [], Expr}, {see, _, _} = SeeTag]} ->
+		   {see, Attrs, _} = rewrite_docgen_link(SeeTag),
+		   {p, [], ["Equivalent to ", {a, Attrs, Expr}, "."]}
+	   end,
+    xmerl_lib:normalize_element(NewE).
 
 %%. vim: foldmethod=marker foldmarker=%%',%%.

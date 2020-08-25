@@ -69,7 +69,6 @@ see_app() -> ok.
 %% @see //edoc/edoc_doclet. Should map to `seeerl'.
 see_app_module() -> ok.
 
-%% @doc Should map to `seemfa'.
 %% @see //edoc/edoc:files/2.
 see_app_mfa() -> ok.
 
@@ -84,3 +83,12 @@ see_local_type() -> ok.
 
 %% @see eep48_links:t(). Should map to `seetype'.
 see_external_type() -> ok.
+
+%% @doc This is referenced from another function with the `equiv' tag.
+equiv_target(Arg) -> Arg.
+
+%% @equiv equiv_target(ok)
+fun_with_equiv_tag() -> equiv_target(ok).
+
+%% @equiv {<<"arbitrary">>, erlang, "term"}
+fun_with_non_call_equiv_tag() -> ok.

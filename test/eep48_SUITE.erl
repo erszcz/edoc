@@ -18,7 +18,8 @@
 	 type_deprecated_tag/1,
 	 cb_since_tag/1,
 	 cb_deprecated_tag/1,
-	 links/1]).
+	 links/1,
+	 equiv/1]).
 
 %%
 %% CT preamble
@@ -33,7 +34,8 @@ all() -> [edoc_app_should_pass_shell_docs_validation,
 	  type_deprecated_tag,
 	  cb_since_tag,
 	  cb_deprecated_tag,
-	  links].
+	  links,
+	  equiv].
 
 %% TODO: remove these cases once EDoc supports extracting the relevant tags
 not_supported() -> [type_since_tag,
@@ -133,6 +135,14 @@ links(Config) ->
     ?assertEqual({<<"seetype">>, <<"eep48_links#t/0">>},
 		 get_doc_link({function, external_type_link, 0}, Docs)).
 
+equiv(Config) ->
+    Docs = get_docs(Config, eep48_links),
+    %?debugVal(Docs, 1000),
+    ?assertMatch(<<"Equivalent to equiv_target(ok).">>,
+		 get_flat_doc({function, fun_with_equiv_tag, 0}, Docs)),
+    ?assertMatch(<<"Equivalent to {<<\"arbitrary\">>, erlang, \"term\"}.">>,
+		 get_flat_doc({function, fun_with_non_call_equiv_tag, 0}, Docs)).
+
 %%
 %% Helpers
 %%
@@ -194,6 +204,15 @@ fetch(K, List) ->
 	false -> erlang:error({not_found, K, List});
 	{K, V} -> V
     end.
+
+get_flat_doc(KNA, Docs) ->
+    flatten_doc(get_doc(KNA, Docs)).
+
+flatten_doc(XML) ->
+    iolist_to_binary(lists:reverse(xmerl_lib:foldxml(fun flatten_xml/2, [], XML))).
+
+flatten_xml(T, Acc) when is_binary(T) -> [T | Acc];
+flatten_xml({_, _, XML}, Acc) -> xmerl_lib:foldxml(fun flatten_xml/2, Acc, XML).
 
 get_doc({K, N, A}, Docs) ->
     Entry = docs_v1_entry(lookup_entry(K, N, A, Docs)),
