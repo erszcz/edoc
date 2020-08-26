@@ -355,8 +355,12 @@ rewrite_a_tag(#xmlElement{name = a} = E) ->
     xmerl_lib:normalize_element(rewrite_docgen_link(SimpleE)).
 
 rewrite_see_tag(#xmlElement{name = see} = E) ->
+    %% TODO: this is not formatted nicely by shell_docs...
+    %% missing `p' around preceding description
     SeeTag = xmerl_lib:simplify_element(E),
-    xmerl_lib:normalize_element(rewrite_docgen_link(SeeTag)).
+    {see, Attrs, XML} = rewrite_docgen_link(SeeTag),
+    NewXML = {p, [], ["See also ", {a, Attrs, XML}, "."]},
+    xmerl_lib:normalize_element(NewXML).
 
 rewrite_docgen_link({Tag, AttrL, SubEls} = E) when Tag =:= a; Tag =:= see ->
     Attrs = maps:from_list(AttrL),

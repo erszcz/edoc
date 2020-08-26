@@ -92,3 +92,11 @@ fun_with_equiv_tag() -> equiv_target(ok).
 
 %% @equiv {<<"arbitrary">>, erlang, "term"}
 fun_with_non_call_equiv_tag() -> ok.
+
+%% @equiv equiv_target(ok)
+%% @doc This function has equiv, doc, and see tags.
+%%
+%% And a somewhat long description to check how `shell_docs' renders paragraphs.
+%% @end
+%% @see equiv_target/1
+fun_with_equiv_doc_and_see() -> equiv_target(ok).
