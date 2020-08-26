@@ -416,7 +416,11 @@ sees(Tags, Env) ->
 see(Ref, [], Env) ->
     see(Ref, [edoc_refs:to_string(Ref)], Env);
 see(Ref, XML, Env) ->
-    {see, [{name, edoc_refs:to_string(Ref)}] ++ href(Ref, Env), XML}.
+    {DocgenRel, DocgenURI} = edoc_refs:get_docgen_link(Ref),
+    Attrs = [{'docgen-rel', DocgenRel},
+	     {'docgen-href', DocgenURI},
+	     {name, edoc_refs:to_string(Ref)}] ++ href(Ref, Env),
+    {see, Attrs, XML}.
 
 href(Ref, Env) ->
     [{href, edoc_refs:get_uri(Ref, Env)}]
