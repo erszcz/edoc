@@ -201,12 +201,6 @@ function(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
     Anno = anno(Doc, Opts),
-    %% TODO: cope with equiv, see, description:
-    %% - get equiv
-    %% - get see
-    %% - get description
-    %% - merge together
-    %% - output with doc_content(Content, Opts)
     EntryDoc = doc_contents("./", Doc, Opts),
     Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
 			      meta_since(Doc, Opts) ++
@@ -247,7 +241,7 @@ anno(Doc, Opts) ->
 
 -spec docs_v1_entry(_, _, _, _, _, _) -> docs_v1_entry().
 docs_v1_entry(Kind, Name, Arity, Anno, EntryDoc, Metadata) ->
-    % TODO get signature from abstract code
+    %% `Signature' is a pretty-printed label. The real signature (spec) is stored in `Metadata'.
     Signature = [list_to_binary(atom_to_list(Name) ++ "/" ++ integer_to_list(Arity))],
     {{Kind, Name, Arity}, Anno, Signature, EntryDoc, Metadata}.
 
