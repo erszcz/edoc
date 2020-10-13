@@ -183,7 +183,8 @@ callback(Doc, Opts) ->
 		%% TODO: callback placeholders...
 		{0, none, []}
 	end,
-    Anno = erl_anno:new(Line),
+    {source, File} = lists:keyfind(source, 1, Opts),
+    Anno = erl_anno:set_file(File, erl_anno:new(Line)),
     EntryDoc = doc_content(DocContent, Opts),
     Metadata = maps:from_list(Meta),
     docs_v1_entry(callback, Name, Arity, Anno, EntryDoc, Metadata).
