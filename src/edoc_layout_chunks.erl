@@ -79,7 +79,11 @@ module(Doc, Options) ->
 -spec edoc_to_chunk(edoc:xmerl_module(), proplists:proplist()) -> docs_v1().
 edoc_to_chunk(Doc, Opts) ->
     [Doc] = xmerl_xpath:string("//module", Doc),
-    Anno = anno(Doc, Opts),
+    {source, File} = lists:keyfind(source, 1, Opts),
+    Entries = entries(Opts),
+    ModuleEntry = edoc_data:get_entry(module, Entries),
+    Line = ModuleEntry#entry.line,
+    Anno = erl_anno:set_file(File, erl_anno:new(Line)),
     ModuleDoc = doc_contents("./description/fullDescription", Doc, Opts),
     Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
 			      meta_since(Doc, Opts)),

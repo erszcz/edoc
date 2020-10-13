@@ -33,7 +33,7 @@
 
 -export([module/4, overview/4, type/2]).
 
--export([hidden_filter/2, get_all_tags/1]).
+-export([hidden_filter/2, get_all_tags/1, get_entry/2]).
 
 -include("edoc.hrl").
 
@@ -46,7 +46,6 @@
 %%                   functions)>
 %% <!ATTLIST module
 %%   name CDATA #REQUIRED
-%%   line CDATA #REQUIRED
 %%   private NMTOKEN(yes | no) #IMPLIED
 %%   hidden NMTOKEN(yes | no) #IMPLIED
 %%   root CDATA #IMPLIED>
@@ -98,8 +97,7 @@ module(Module, Entries, Env, Opts) ->
     Functions = function_filter(Entries, Opts),
     Out = {module, ([{name, Name},
 		     {root, Env#env.root},
-                     {encoding, Module#module.encoding},
-		     {line, HeaderEntry#entry.line}]
+                     {encoding, Module#module.encoding}]
 		    ++ case is_private(HeaderTags) of
 			   true -> [{private, "yes"}];
 			   false -> []
