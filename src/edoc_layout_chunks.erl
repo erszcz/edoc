@@ -170,19 +170,7 @@ callback(Doc, Opts) ->
     Arity = xpath_to_integer("./@arity", Doc, Opts),
     Entries = entries(Opts),
     Tags = edoc_data:get_all_tags(Entries),
-    {Line, DocContent, Meta} =
-	case lists:filter(select_callback(Name, Arity), Tags) of
-	    [#tag{name = callback, origin = code} = T] ->
-		#tag{line = L, data = {_, D0}, form = F} = T,
-		D1 = case D0 of
-			 none -> none;
-			 _ -> xmerl_to_binary(D0)
-		     end,
-		{L, [D1], [{signature, [F]}]};
-	    _ ->
-		%% TODO: callback placeholders...
-		{0, none, []}
-	end,
+    {Line, DocContent, Meta} = callback_line_doc_and_meta(Name, Arity, Tags),
     {source, File} = lists:keyfind(source, 1, Opts),
     Anno = erl_anno:set_file(File, erl_anno:new(Line)),
     EntryDoc = doc_content(DocContent, Opts),
@@ -193,6 +181,20 @@ select_callback(Name, Arity) ->
     fun (#tag{name = callback, data = {{N, A}, _}})
 	  when N =:= Name, A =:= Arity -> true;
 	(_) -> false
+    end.
+
+callback_line_doc_and_meta(Name, Arity, Tags) ->
+    case lists:filter(select_callback(Name, Arity), Tags) of
+	[#tag{name = callback, origin = code} = T] ->
+	    #tag{line = L, data = {_, D0}, form = F} = T,
+	    D1 = case D0 of
+		     none -> none;
+		     _ -> xmerl_to_binary(D0)
+		 end,
+	    {L, [D1], [{signature, [F]}]};
+	_ ->
+	    %% TODO: callback placeholders...
+	    {0, none, []}
     end.
 
 functions(Doc, Opts) ->
