@@ -12,6 +12,7 @@
 
 %% Test cases
 -export([edoc_app_should_pass_shell_docs_validation/1,
+	 function_anno/1,
 	 function_since_tag/1,
 	 function_deprecated_tag/1,
 	 type_since_tag/1,
@@ -28,6 +29,7 @@
 suite() -> [].
 
 all() -> [edoc_app_should_pass_shell_docs_validation,
+	  function_anno,
 	  function_since_tag,
 	  function_deprecated_tag,
 	  type_since_tag,
@@ -80,6 +82,12 @@ edoc_app_should_pass_shell_docs_validation(_Config) ->
     ok = application:load(edoc),
     {ok, Modules} = application:get_key(edoc, modules),
     [ shell_docs:validate(M) || M <- Modules ].
+
+function_anno(Config) ->
+    Docs = get_docs(Config, eep48_meta),
+    %?debugVal(Docs, 1000),
+    ?assertEqual([{file, "eep48_meta.erl"}, {location, 35}],
+		 get_anno(function, fun_with_since_tag, 0, Docs)).
 
 function_since_tag(Config) ->
     Docs = get_docs(Config, eep48_meta),
@@ -198,6 +206,10 @@ get_doc_link(KNA, Docs) ->
     {a, Attrs, _} = Link,
     <<"https://erlang.org/doc/link/", ShortRel/bytes>> = fetch(rel, Attrs),
     {ShortRel, fetch(href, Attrs)}.
+
+get_anno(Kind, Name, Arity, Docs) ->
+    {_, Anno, _, _, _} = lookup_entry(Kind, Name, Arity, Docs),
+    Anno.
 
 fetch(K, List) ->
     case lists:keyfind(K, 1, List) of
