@@ -15,6 +15,7 @@
 	 module_anno/1,
 	 function_anno/1,
 	 type_anno/1,
+	 cb_anno/1,
 	 function_since_tag/1,
 	 function_deprecated_tag/1,
 	 type_since_tag/1,
@@ -34,6 +35,7 @@ all() -> [edoc_app_should_pass_shell_docs_validation,
 	  module_anno,
 	  function_anno,
 	  type_anno,
+	  cb_anno,
 	  function_since_tag,
 	  function_deprecated_tag,
 	  type_since_tag,
@@ -104,6 +106,12 @@ type_anno(Config) ->
     %?debugVal(Docs, 1000),
     ?assertEqual([{file, "eep48_meta.erl"}, {location, 22}],
 		 get_anno(type, type_with_since_tag, 0, Docs)).
+
+cb_anno(Config) ->
+    Docs = get_docs(Config, eep48_meta),
+    %?debugVal(Docs, 1000),
+    ?assertEqual([{file, "eep48_meta.erl"}, {location, 28}],
+		 get_anno(callback, cb_with_since_tag, 0, Docs)).
 
 function_since_tag(Config) ->
     Docs = get_docs(Config, eep48_meta),
