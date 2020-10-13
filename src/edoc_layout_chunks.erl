@@ -207,21 +207,24 @@ functions(Doc, Opts) ->
 function(Doc, Opts) ->
     Name = xpath_to_atom("./@name", Doc, Opts),
     Arity = xpath_to_integer("./@arity", Doc, Opts),
-    Anno = anno(Doc, Opts),
+    {Line, MetaSig} = function_line_and_signature({Name, Arity}, entries(Opts)),
+    {source, File} = lists:keyfind(source, 1, Opts),
+    Anno = erl_anno:set_file(File, erl_anno:new(Line)),
     EntryDoc = doc_contents("./", Doc, Opts),
     Metadata = maps:from_list(meta_deprecated(Doc, Opts) ++
 			      meta_since(Doc, Opts) ++
-			      meta_function_sig({Name, Arity}, entries(Opts))),
+			      MetaSig),
     docs_v1_entry(function, Name, Arity, Anno, EntryDoc, Metadata).
 
--spec meta_function_sig(edoc:function_name(), [edoc:entry()]) -> Metadata when
-      Metadata :: #{signature => erl_parse:abstract_form()}.
-meta_function_sig(NA, Entries) ->
-    #entry{name = NA} = E = lists:keyfind(NA, #entry.name, Entries),
+-spec function_line_and_signature(edoc:function_name(), [edoc:entry()]) -> R when
+      R :: {non_neg_integer(), [{signature, erl_parse:abstract_form()}]}.
+function_line_and_signature(NA, Entries) ->
+    #entry{name = NA, line = Line} = E = lists:keyfind(NA, #entry.name, Entries),
     case lists:keyfind(spec, #tag.name, E#entry.data) of
-	false -> [];
+	false ->
+	    {Line, []};
 	#tag{name = spec} = T ->
-	    [{signature, [erl_syntax:revert(T#tag.form)]}]
+	    {Line, [{signature, [erl_syntax:revert(T#tag.form)]}]}
     end.
 
 -spec entries(proplists:proplist()) -> [edoc:entry()].
