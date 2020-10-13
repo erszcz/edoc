@@ -12,6 +12,7 @@
 
 %% Test cases
 -export([edoc_app_should_pass_shell_docs_validation/1,
+	 module_anno/1,
 	 function_anno/1,
 	 function_since_tag/1,
 	 function_deprecated_tag/1,
@@ -29,6 +30,7 @@
 suite() -> [].
 
 all() -> [edoc_app_should_pass_shell_docs_validation,
+	  module_anno,
 	  function_anno,
 	  function_since_tag,
 	  function_deprecated_tag,
@@ -82,6 +84,12 @@ edoc_app_should_pass_shell_docs_validation(_Config) ->
     ok = application:load(edoc),
     {ok, Modules} = application:get_key(edoc, modules),
     [ shell_docs:validate(M) || M <- Modules ].
+
+module_anno(Config) ->
+    Docs = #docs_v1{} = get_chunk(Config, eep48_meta),
+    %?debugVal(Docs, 1000),
+    ?assertEqual([{file, "eep48_meta.erl"}, {location, 1}],
+		 Docs#docs_v1.anno).
 
 function_anno(Config) ->
     Docs = get_docs(Config, eep48_meta),
@@ -155,10 +163,14 @@ equiv(Config) ->
 %% Helpers
 %%
 
-get_docs(Config, M) ->
+get_chunk(Config, M) ->
     DataDir = ?config(data_dir, Config),
     PrivDir = ?config(priv_dir, Config),
     {ok, Chunk} = get_doc_chunk(DataDir, PrivDir, M),
+    Chunk.
+
+get_docs(Config, M) ->
+    Chunk = get_chunk(Config, M),
     Chunk#docs_v1.docs.
 
 get_function_meta_field(Field, F, A, Docs) ->
