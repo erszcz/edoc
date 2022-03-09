@@ -1,3 +1,11 @@
+# Archived - merged back into Erlang/OTP
+
+This repository is now archived as [the work done here was merged upstream into Erlang/OTP and became part of OTP 24](https://github.com/erlang/otp/pull/2803).
+
+Thanks to that it's now possible to [generate ExDoc documentation for Erlang projects](https://github.com/elixir-lang/ex_doc#using-exdoc-with-erlang-projects). This is already happening in the community as evidenced by projects such as [`rebar3_hex`](https://hexdocs.pm/rebar3_hex/readme.html), but also [`telemetry`](https://hexdocs.pm/telemetry/readme.html), [`systemd`](https://hexdocs.pm/systemd), [`ram`](https://hexdocs.pm/ram/readme.html), or [`syn`](https://hexdocs.pm/syn/readme.html) to name a few.
+
+The same mechanism - [`docs` chunk defined by EEP-48](https://www.erlang.org/eeps/eep-0048) - also provides the [`shell_docs`](https://www.erlang.org/doc/man/shell_docs.html) documentation for non-OTP Erlang projects.
+
 # edoc
 
 [![TravisCI Build Status](https://travis-ci.org/erszcz/edoc.svg?branch=master)](https://travis-ci.org/erszcz/edoc)
